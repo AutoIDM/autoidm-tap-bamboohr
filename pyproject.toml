@@ -2,7 +2,7 @@
 name = "tap-bamboohr"
 version = "0.0.1"
 description = "`tap-bamboohr` is Singer-compliant BambooHR tap built with Singer SDK."
-authors = ["TODO: Your Name <your.email@sample.com>"]
+authors = ["Derek Visch <dvisch@autoidm.com>"]
 license = "Apache v2"
 
 [tool.poetry.dependencies]
@@ -12,7 +12,7 @@ singer-python = "5.9.0"
 # Note: Until we clear the first non-prerelease, `singer-sdk` need to be pinned to a specific version.
 #       For a list of released versions: https://pypi.org/project/singer-sdk/#history
 #       To safely update the version number: `poetry add singer-sdk==0.0.2-dev.1059670179`
-singer-sdk = "0.0.2-dev.1059670179"
+singer-sdk = "0.0.2.dev1070916333"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.1.2"

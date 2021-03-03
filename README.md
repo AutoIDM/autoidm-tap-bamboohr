@@ -11,8 +11,8 @@ This Singer-compliant tap was created using the [Singer SDK](https://gitlab.com/
 
 ## Getting Started
 
-- [ ] As a first step, you will want to scan the entire project for the text "`TODO:`" and complete any recommended steps.
-- [ ] `TODO:` Once you have a boilerplate prepped, you'll want to setup Poetry and create the virtual environment for your project:
+- [ X ] As a first step, you will want to scan the entire project for the text "`TODO:`" and complete any recommended steps.
+- [ X ] `TODO:` Once you have a boilerplate prepped, you'll want to setup Poetry and create the virtual environment for your project:
 
     ```bash
     pipx install poetry
