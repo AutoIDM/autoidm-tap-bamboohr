@@ -6,7 +6,7 @@ import http.client
 
 from copy import deepcopy
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Iterable
 
 from singer_sdk.streams import RESTStream
 from singer_sdk.authenticators import APIAuthenticatorBase, SimpleAuthenticator, OAuthAuthenticator, OAuthJWTAuthenticator
@@ -43,8 +43,6 @@ class TapBambooHRStream(RESTStream):
             params.update({"updated": starting_datetime})
         return params
 
-
-
     @property
     def authenticator(self) -> APIAuthenticatorBase:
         http_headers = {}
@@ -60,7 +58,12 @@ class TapBambooHRStream(RESTStream):
         print(f"Http headers from authenticator, {http_headers}")
         return SimpleAuthenticator(stream=self, http_headers=http_headers)
 
-
+    #TODO Try to replace this with a Schema insted of the hard coded employees
+    def parse_response(self, response: requests.Response) -> Iterable[dict]:
+        """Parse the response and return an iterator of result rows."""
+        resp_json = response.json()
+        for row in resp_json.get("employees"):
+            yield row
 
 class Employees(TapBambooHRStream):
     name = "employees"
@@ -69,20 +72,6 @@ class Employees(TapBambooHRStream):
     replication_key = None
     #Probably going to go with Discovery here as BambooHR offers a field list that can be different per user of BambooHR
     schema = PropertiesList(
-#        Property(
-#          "fields",
-#          ArrayType(
-#            ObjectType(
-#              Property("id", StringType),
-#              Property("name", StringType),
-#              Property("type", StringType),
-#              )
-#            )
-#        ),
-        Property(
-          "employees",
-          ArrayType(
-            ObjectType(
               NumberType("id"),
               Property("displayName", StringType),
               Property("firstName", StringType),
@@ -92,9 +81,16 @@ class Employees(TapBambooHRStream):
               Property("workPhone", StringType),
               Property("workPhoneExtension", StringType),
               Property("skypeUsername", StringType),
-              )
-          )
-        ),
+              Property("preferredName", StringType),
+              Property("mobilePhone", StringType),
+              Property("workEmail", StringType),
+              Property("department", StringType),
+              Property("location", StringType),
+              Property("division", StringType),
+              Property("linkedIn", StringType),
+              Property("photoUploaded", StringType), #bool?
+              Property("photoUrl", StringType),
+              Property("canUploadPhoto", StringType), #bool?
     ).to_dict()
     print(schema)
 
