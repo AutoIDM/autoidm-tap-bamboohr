@@ -28,17 +28,9 @@ class TapBambooHR(Tap):
     """BambooHR tap class."""
 
     name = "tap-bamboohr"
-    logging.basicConfig(level=logging.DEBUG)
-    logging.basicConfig()
-    logging.getLogger().setLevel(logging.DEBUG)
-    requests_log = logging.getLogger("requests.packages.urllib3")
-    requests_log.setLevel(logging.DEBUG)
-    requests_log.propagate = True
     config_jsonschema = PropertiesList(
         StringType("auth_token", required=True),
         StringType("subdomain", required=True),
-        #DateTimeType("start_date"),
-        #StringType("api_url"),
     ).to_dict()
 
     def discover_streams(self) -> List[Stream]:

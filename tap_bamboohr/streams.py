@@ -23,13 +23,9 @@ from singer_sdk.helpers.typing import (
 )
 
 SCHEMAS_DIR = Path("./schemas")
-http.client.HTTPConnection.debuglevel = 2
-
-
 
 class TapBambooHRStream(RESTStream):
     """BambooHR stream class."""
-    #TODO: Remove logging stuff
     @property
     def url_base(self) -> str: 
       subdomain = self.config.get("subdomain")
@@ -54,8 +50,6 @@ class TapBambooHRStream(RESTStream):
         http_headers["Accept"] = "application/json"
         if self.config.get("user_agent"):
             http_headers["User-Agent"] = self.config.get("user_agent")
-        #TODO remove me, logging junk
-        print(f"Http headers from authenticator, {http_headers}")
         return SimpleAuthenticator(stream=self, http_headers=http_headers)
 
     #TODO Try to replace this with a Schema insted of the hard coded employees
