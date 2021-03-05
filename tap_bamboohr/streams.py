@@ -86,7 +86,6 @@ class Employees(TapBambooHRStream):
               Property("photoUrl", StringType),
               Property("canUploadPhoto", StringType), #bool?
     ).to_dict()
-    print(schema)
 
 
 #class StreamB(TapBambooHRStream):
