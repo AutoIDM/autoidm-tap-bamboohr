@@ -66,7 +66,7 @@ class Employees(TapBambooHRStream):
     replication_key = None
     #Probably going to go with Discovery here as BambooHR offers a field list that can be different per user of BambooHR
     schema = PropertiesList(
-              NumberType("id"),
+              Property("id", StringType),
               Property("displayName", StringType),
               Property("firstName", StringType),
               Property("lastName", StringType),
@@ -82,9 +82,9 @@ class Employees(TapBambooHRStream):
               Property("location", StringType),
               Property("division", StringType),
               Property("linkedIn", StringType),
-              Property("photoUploaded", StringType), #bool?
+              Property("photoUploaded", BooleanType), 
               Property("photoUrl", StringType),
-              Property("canUploadPhoto", StringType), #bool?
+              Property("canUploadPhoto", NumberType), 
     ).to_dict()
     print(schema)
 
