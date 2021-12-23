@@ -10,11 +10,11 @@ Tap was created by [AutoIDM](https://autoidm.com). Check us out for tap/target c
 * `stream-maps`
 
 ## Settings
-
-| Setting   | Required | Default | Description |
-|:----------|:--------:|:-------:|:------------|
-| auth_token| True     | None    |             |
-| subdomain | True     | None    |             |
+| Setting       | Required | Default | Description |
+|:--------------|:--------:|:-------:|:------------|
+| auth_token    | True     | None    | Token gathered from BambooHR, instructions are [here](https://documentation.bamboohr.com/docs#section-authentication) |
+| subdomain     | True     | None    | subdomain from BambooHR |
+| custom_reports| False    | None    | CustomReport full body definition, example in meltano.yml, same format as the Body for the POST request [here](https://documentation.bamboohr.com/reference/request-custom-report-1) |
 
 A full list of supported settings and capabilities is available by running: `tap-bamboohr --about`
 

@@ -47,13 +47,21 @@ class Employees(TapBambooHRStream):
     schema_filepath = SCHEMAS_DIR / "directory.json"
 
 class CustomReport(TapBambooHRStream):
-    name = "customereport" #TODO make dynamic from catalog
     path = "/reports/custom"
     primary_keys = ["id"]
     records_jsonpath = "$.employees[*]"
     replication_key = None
     schema_filepath = SCHEMAS_DIR / "directory.json"
     rest_method = "POST"
+
+    def __init__(self, name, custom_report_http_post_body, *args, **kwargs):
+        self.name = name
+        self._custom_report_http_post_body = custom_report_http_post_body
+        super().__init__(*args, **kwargs)
+    
+    @property
+    def custom_report_http_post_body(self):
+        return self._custom_report_http_post_body
 
     def get_url_params(
         self, context: Optional[dict], next_page_token: Optional[Any]
@@ -73,4 +81,4 @@ class CustomReport(TapBambooHRStream):
         Returns:
             Dictionary with the body to use for the request.
         """
-        return self.config.get("custom_reports")[0]
+        return self.custom_report_http_post_body
