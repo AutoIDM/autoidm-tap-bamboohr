@@ -1,10 +1,12 @@
 """Stream class for tap-bamboohr."""
 
 import base64
+from typing import Dict, Optional, Any
 from pathlib import Path
 
 from singer_sdk.streams import RESTStream
 from singer_sdk.authenticators import SimpleAuthenticator
+
 
 SCHEMAS_DIR = Path(__file__).parent / Path("./schemas")
 
@@ -36,7 +38,6 @@ class TapBambooHRStream(RESTStream):
         ).decode("utf-8")
         return SimpleAuthenticator(stream=self, auth_headers=http_headers)
 
-
 class Employees(TapBambooHRStream):
     name = "employees"
     path = "/employees/directory"
@@ -44,3 +45,40 @@ class Employees(TapBambooHRStream):
     records_jsonpath = "$.employees[*]"
     replication_key = None
     schema_filepath = SCHEMAS_DIR / "directory.json"
+
+class CustomReport(TapBambooHRStream):
+    path = "/reports/custom"
+    primary_keys = ["id"]
+    records_jsonpath = "$.employees[*]"
+    replication_key = None
+    schema_filepath = SCHEMAS_DIR / "directory.json"
+    rest_method = "POST"
+
+    def __init__(self, name, custom_report_http_post_body, *args, **kwargs):
+        self.name = name
+        self._custom_report_http_post_body = custom_report_http_post_body
+        super().__init__(*args, **kwargs)
+    
+    @property
+    def custom_report_http_post_body(self):
+        return self._custom_report_http_post_body
+
+    def get_url_params(
+        self, context: Optional[dict], next_page_token: Optional[Any]
+    ) -> Dict[str, Any]:
+        return {"format":"JSON"}
+    
+    def prepare_request_payload(
+        self, context: Optional[dict], next_page_token: Optional[Any]
+    ) -> Optional[dict]:
+        """Prepare the data payload for the REST API request.
+
+        Args:
+            context: Stream partition or context dictionary.
+            next_page_token: Token, page number or any request argument to request the
+                next page of data.
+
+        Returns:
+            Dictionary with the body to use for the request.
+        """
+        return self.custom_report_http_post_body
