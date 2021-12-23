@@ -17,6 +17,43 @@ plugins:
       kind: string
     config:
       subdomain: autoidmtest
+      custom_reports:
+        - name: "AutoIDM Employee Report"
+          filters: 
+            lastChanged:
+              includeNull: "yes"
+              value: "2012-10-17T16:00:00Z"
+          fields:
+            - "id"
+            - "displayName"
+            - "firstName"
+            - "lastName"
+            - "preferredName"
+            - "gender"
+            - "jobTitle"
+            - "workPhone"
+            - "mobilePhone"
+            - "workEmail"
+            - "homeEmail"
+            - "department"
+            - "location"
+            - "division"
+            - "linkedIn"
+            - "workPhoneExtension"
+            - "photoUploaded"
+            - "photoUrl"
+            - "canUploadPhoto"
+            - "status"
+            - "employeeid"
+            - "mobilePhone"
+            - "employeeStatusDate"
+            - "employeeNumber"
+            - "userid"
+            - "paytype"
+            - "originalHireDate"
+            - "employee_assets"
+            - "eeo"
+
   loaders:
   - name: target-jsonl
     variant: andyh1203
