@@ -5,14 +5,7 @@ from typing import List
 import logging
 import click
 from singer_sdk import Tap, Stream
-from singer_sdk.helpers.typing import (
-    ArrayType,
-    BooleanType,
-    ComplexType,
-    DateTimeType,
-    PropertiesList,
-    StringType,
-)
+from singer_sdk import typing as th
 
 from tap_bamboohr.streams import (
     Employees,
@@ -21,21 +14,23 @@ from tap_bamboohr.streams import (
 PLUGIN_NAME = "tap-bamboohr"
 
 STREAM_TYPES = [
-  Employees,
+    Employees,
 ]
+
 
 class TapBambooHR(Tap):
     """BambooHR tap class."""
 
     name = "tap-bamboohr"
-    config_jsonschema = PropertiesList(
-        StringType("auth_token", required=True),
-        StringType("subdomain", required=True),
+    config_jsonschema = th.PropertiesList(
+        th.Property("auth_token", th.StringType, required=True),
+        th.Property("subdomain", th.StringType, required=True),
     ).to_dict()
 
     def discover_streams(self) -> List[Stream]:
         """Return a list of discovered streams."""
         return [stream_class(tap=self) for stream_class in STREAM_TYPES]
+
 
 # CLI Execution:
 
