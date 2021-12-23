@@ -1,0 +1,74 @@
+{
+        "type": "object",
+        "properties": {
+                "id": {
+                        "type": "string"
+                },
+                "displayName": {
+                        "type": "string"
+                },
+                "firstName": {
+                        "type": "string"
+                },
+                "lastName": {
+                        "type": "string"
+                },
+                "preferredName": {
+                        "type": "null"
+                },
+                "jobTitle": {
+                        "type": "string"
+                },
+                "workPhone": {
+                        "type": [
+                                "null",
+                                "string"
+                        ]
+                },
+                "mobilePhone": {
+                        "type": [
+                                "null",
+                                "string"
+                        ]
+                },
+                "workEmail": {
+                        "type": [
+                                "null",
+                                "string"
+                        ]
+                },
+                "department": {
+                        "type": "string"
+                },
+                "location": {
+                        "type": "string"
+                },
+                "division": {
+                        "type": [
+                                "null",
+                                "string"
+                        ]
+                },
+                "linkedIn": {
+                        "type": "null"
+                },
+                "pronouns": {
+                        "type": "null"
+                },
+                "workPhoneExtension": {
+                        "type": [
+                                "null",
+                                "string"
+                        ]
+                },
+                "photoUploaded": {
+                        "type": "boolean"
+                },
+                "photoUrl": {
+                        "type": "string"
+                },
+                "canUploadPhoto": {
+                        "type": "integer"
+                }
+        }
+}
