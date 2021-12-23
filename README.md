@@ -1,46 +1,41 @@
-_**NOTE:** The Singer SDK framework is still in early exploration and development phases. For more
-information and to be updated on this project, please feel free to subscribe to our
-[original Meltano thread](https://gitlab.com/meltano/meltano/-/issues/2401) and the
-[initial PR for the underlying framework](https://gitlab.com/meltano/singer-sdk/-/merge_requests/1)._
+# `tap-bamboohr`
+Tap was created by [AutoIDM](https://autoidm.com). Check us out for tap/target creation, maintenace, support, and more!
 
---------------------------------
+## Capabilities
 
-# Welcome to the tap-bamboohr Singer Tap!
+* `catalog`
+* `state`
+* `discover`
+* `about`
+* `stream-maps`
 
-This Singer-compliant tap was created using the [Singer SDK](https://gitlab.com/meltano/singer-sdk).
+## Settings
+
+| Setting   | Required | Default | Description |
+|:----------|:--------:|:-------:|:------------|
+| auth_token| True     | None    |             |
+| subdomain | True     | None    |             |
+
+A full list of supported settings and capabilities is available by running: `tap-bamboohr --about`
+
 
 ## Getting Started
-
-- [ X ] As a first step, you will want to scan the entire project for the text "`TODO:`" and complete any recommended steps.
-- [ X ] `TODO:` Once you have a boilerplate prepped, you'll want to setup Poetry and create the virtual environment for your project:
-
     ```bash
     pipx install poetry
     poetry install
     ```
-
-- [ ] `TODO:` You can test out your new CLI directly with:
-
     ```bash
     poetry run tap-bamboohr --help
     ```
-
-- [ ] `TODO:` Create some tests and then run:
-
     ```bash
     poetry run pytest
     ```
-
-_`TODO: Remove the above section once complete.`_
-
 ## Singer SDK Dev Guide
 
 See the [dev guide](../../docs/dev_guide.md) for more instructions on how to use the Singer SDK to 
 develop your own taps and targets.
 
 ## Config Guide
-
-_`TODO:` Provide instructions here for users of the tap:_
 
 ### Accepted Config Options
 
@@ -49,3 +44,31 @@ _`TODO:` Provide instructions here for users of the tap:_
 ### Source Authentication and Authorization
 
 - [ ] `TODO:` If your tap requires special access on the source system, or any special authentication requirements, provide those here.
+This Singer-compliant tap was created using the [Singer SDK](https://gitlab.com/meltano/singer-sdk).
+
+### Testing with [Meltano](https://www.meltano.com)
+
+_**Note:** This tap will work in any Singer environment and does not require Meltano.
+
+Install Meltano (if you haven't already) and any needed plugins:
+
+```bash
+# Install meltano
+pipx install meltano
+# Initialize meltano within this directory
+cd tap-clickup
+meltano install
+```
+
+Now you can test and orchestrate using Meltano:
+
+```bash
+# Test invocation:
+meltano invoke tap-clickup --version
+# OR run a test `elt` pipeline:
+meltano elt tap-clickup target-jsonl
+```
+
+### SDK
+
+Built with the [Meltano SDK](https://sdk.meltano.com) for Singer Taps and Targets.
