@@ -14,7 +14,10 @@
                         "type": "string"
                 },
                 "preferredName": {
-                        "type": "null"
+                        "type": [
+                                "null",
+                                "string"
+                        ]
                 },
                 "jobTitle": {
                         "type": "string"
@@ -50,10 +53,16 @@
                         ]
                 },
                 "linkedIn": {
-                        "type": "null"
+                        "type": [
+                                "null",
+                                "string"
+                        ]
                 },
                 "pronouns": {
-                        "type": "null"
+                        "type": [
+                                "null",
+                                "string"
+                        ]
                 },
                 "workPhoneExtension": {
                         "type": [
