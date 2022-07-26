@@ -3,6 +3,7 @@
 import base64
 from typing import Dict, Optional, Any
 from pathlib import Path
+from singer_sdk import typing
 
 from singer_sdk.streams import RESTStream
 from singer_sdk.authenticators import SimpleAuthenticator
@@ -51,17 +52,23 @@ class CustomReport(TapBambooHRStream):
     primary_keys = ["id"]
     records_jsonpath = "$.employees[*]"
     replication_key = None
-    schema_filepath = SCHEMAS_DIR / "directory.json"
     rest_method = "POST"
+    @property
+    def schema(self):
+        list_of_fields = []
+        for field in self.custom_report_config["fields"]:
+            list_of_fields.append(typing.Property(field, typing.StringType))
+        return typing.PropertiesList(*list_of_fields).to_dict()
 
-    def __init__(self, name, custom_report_http_post_body, *args, **kwargs):
+
+    def __init__(self, name, custom_report_config, *args, **kwargs):
         self.name = name
-        self._custom_report_http_post_body = custom_report_http_post_body
+        self._custom_report_config = custom_report_config
         super().__init__(*args, **kwargs)
     
     @property
-    def custom_report_http_post_body(self):
-        return self._custom_report_http_post_body
+    def custom_report_config(self):
+        return self._custom_report_config
 
     def get_url_params(
         self, context: Optional[dict], next_page_token: Optional[Any]
@@ -81,4 +88,4 @@ class CustomReport(TapBambooHRStream):
         Returns:
             Dictionary with the body to use for the request.
         """
-        return self.custom_report_http_post_body
+        return self.custom_report_config

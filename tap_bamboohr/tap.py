@@ -54,7 +54,7 @@ class TapBambooHR(Tap):
         custom_reports = self.config.get("custom_reports") 
         if (custom_reports):
             for report in self.config.get("custom_reports"):
-                custom_report = CustomReport(tap=self, name=report["name"], custom_report_http_post_body=report)
+                custom_report = CustomReport(tap=self, name=report["name"], custom_report_config=report)
                 streams.append(custom_report)
         return streams
 
