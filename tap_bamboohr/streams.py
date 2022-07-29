@@ -14,6 +14,7 @@ SCHEMAS_DIR = Path(__file__).parent / Path("./schemas")
 class TapBambooHRStream(RESTStream):
     """BambooHR stream class."""
 
+    _LOG_REQUEST_METRIC_URLS: bool = True
     @property
     def url_base(self) -> str:
         subdomain = self.config.get("subdomain")
