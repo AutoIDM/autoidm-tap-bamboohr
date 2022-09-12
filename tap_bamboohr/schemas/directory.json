@@ -37,6 +37,9 @@
                 "division": {
                         "type": ["null","string"]
                 },
+                "supervisor": {
+                        "type": ["null","string"]
+                },
                 "linkedIn": {
                         "type": ["null","string"]
                 },

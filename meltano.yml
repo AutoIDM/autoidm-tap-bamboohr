@@ -1,11 +1,11 @@
 version: 1
 send_anonymous_usage_stats: true
-project_id: 4935d052-aee1-46fa-89f0-a94cdc080064
+project_id: "tap-bamboohr"
 plugins:
   extractors:
   - name: tap-bamboohr
     namespace: tap_bamboohr
-    executable: ./tap-bamboohr.sh
+    pip_url: -e .
     capabilities:
     - state
     - catalog
@@ -15,8 +15,11 @@ plugins:
       kind: password
     - name: subdomain
       kind: string
+    - name: start_date
+      kind: date_iso8601
     config:
       subdomain: autoidmtest
+      start_date: '2010-01-01T00:00:00Z'
       custom_reports:
         - name: "AutoIDM Employee Report"
           filters: 
@@ -53,7 +56,6 @@ plugins:
             - "originalHireDate"
             - "employee_assets"
             - "eeo"
-
   loaders:
   - name: target-jsonl
     variant: andyh1203
