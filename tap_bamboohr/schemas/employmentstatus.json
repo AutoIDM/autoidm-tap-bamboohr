@@ -1,0 +1,30 @@
+{
+        "type": "object",
+        "properties": {
+                "employee_id": {
+                        "type": "string"
+                },
+                "lastChanged": {
+                        "type": "string",
+                        "format": "date-time"
+                },
+                "date": {
+                        "type": "string"
+                },
+                "employmentStatus": {
+                        "type": "string"
+                },
+                "comment": {
+                        "type": ["null","string"]
+                },
+                "terminationReasonId": {
+                        "type": ["null","string"]
+                },
+                "terminationTypeId": {
+                        "type": ["null","string"]
+                },
+                "terminationRehireId": {
+                        "type": ["null","string"]
+                }
+        }
+}

@@ -10,12 +10,14 @@ from singer_sdk import typing as th
 from tap_bamboohr.streams import (
     Employees,
     CustomReport,
+    EmploymentHistoryStatus,
 )
 
 PLUGIN_NAME = "tap-bamboohr"
 
-STREAM_TYPES = [
+STREAM_TYPES = [ #CustomReport has special handing below
     Employees,
+    EmploymentHistoryStatus,
 ]
 
 

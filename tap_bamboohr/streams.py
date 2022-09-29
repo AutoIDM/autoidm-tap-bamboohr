@@ -1,12 +1,13 @@
 """Stream class for tap-bamboohr."""
 
 import base64
-from typing import Dict, Optional, Any
+from typing import Dict, Optional, Any, Iterable
 from pathlib import Path
 from singer_sdk import typing
-
+from functools import cached_property
 from singer_sdk.streams import RESTStream
 from singer_sdk.authenticators import SimpleAuthenticator
+import requests
 
 
 SCHEMAS_DIR = Path(__file__).parent / Path("./schemas")
@@ -90,3 +91,36 @@ class CustomReport(TapBambooHRStream):
             Dictionary with the body to use for the request.
         """
         return self.custom_report_config
+
+#A more generic tables stream would be better, there is a table metadata api
+class EmploymentHistoryStatus(TapBambooHRStream):
+    name = "tables_employmentstatus"
+    path = "/employees/changed/tables/employmentStatus"
+    primary_keys = ["employee_id"]
+    replication_key = None
+    schema_filepath = SCHEMAS_DIR / "employmentstatus.json"
+
+    def get_url_params(
+        self, context: Optional[dict], next_page_token: Optional[Any]
+    ) -> Dict[str, Any]:
+        return {"since":"2012-01-01T00:00:00Z"} #I want all of the data, 2012 is far enough back and referenced in the API Docs
+    
+    def parse_response(self, response: requests.Response) -> Iterable[dict]:
+        """Parse the response and return an iterator of result rows.
+
+        Args:
+            response: A raw `requests.Response`_ object.
+
+        Yields:
+            One item for every item found in the response.
+
+        .. _requests.Response:
+            https://docs.python-requests.org/en/latest/api/#requests.Response
+        """
+        for employeeid, value in response.json()["employees"].items():
+            last_changed = value["lastChanged"]
+            rows = value["rows"]
+            for row in rows:
+                row.update({"lastChanged":last_changed})
+                row.update({"employee_id":employeeid})
+                yield row
