@@ -96,7 +96,7 @@ class CustomReport(TapBambooHRStream):
 class EmploymentHistoryStatus(TapBambooHRStream):
     name = "tables_employmentstatus"
     path = "/employees/changed/tables/employmentStatus"
-    primary_keys = ["employee_id"]
+    primary_keys = ["employee_id", "date", "employmentstatus"]
     replication_key = None
     schema_filepath = SCHEMAS_DIR / "employmentstatus.json"
 
