@@ -10,11 +10,18 @@ Tap was created by [AutoIDM](https://autoidm.com). Check us out for tap/target c
 * `stream-maps`
 
 ## Settings
-| Setting       | Required | Default | Description |
-|:--------------|:--------:|:-------:|:------------|
-| auth_token    | True     | None    | Token gathered from BambooHR, instructions are [here](https://documentation.bamboohr.com/docs#section-authentication) |
-| subdomain     | True     | None    | subdomain from BambooHR |
-| custom_reports| False    | None    | CustomReport full body definition, example in meltano.yml, same format as the Body for the POST request [here](https://documentation.bamboohr.com/reference/request-custom-report-1) |
+
+| Setting             | Required | Default | Description |
+|:--------------------|:--------:|:-------:|:------------|
+| auth_token          | True     | None    | Token gathered from BambooHR, instructions are [here](https://documentation.bamboohr.com/docs#section-authentication) |
+| subdomain           | True     | None    | subdomain from BambooHR |
+| field_mismatch      | True     | fail    | Either `fail` or `ignore`. Determines behavior when fields returned by API don't match the requested fields. |
+| custom_reports      | False    | None    | CustomReport full body definition, example in meltano.yml, same format as the Body for the POST request [here](https://documentation.bamboohr.com/reference/request-custom-report-1) |
+| stream_maps         | False    | None    | Config object for stream maps capability. For more information check out [Stream Maps](https://sdk.meltano.com/en/latest/stream_maps.html). |
+| stream_map_config   | False    | None    | User-defined config values to be used within map expressions. |
+| flattening_enabled  | False    | None    | 'True' to enable schema flattening and automatically expand nested properties. |
+| flattening_max_depth| False    | None    | The max depth to flatten schemas. |
+| batch_config        | False    | None    |             |
 
 A full list of supported settings and capabilities is available by running: `tap-bamboohr --about`
 
@@ -37,9 +44,24 @@ develop your own taps and targets.
 
 ## Config Guide
 
-### Accepted Config Options
+### Selecting Additional Fields in a Custom Report
 
-- [ ] `TODO:` Provide a list of config options accepted by the tap.
+To select additional fields in a custom report, pass in a manually modified catalog using a command like `meltano elt tap-bamboohr target-jsonl --catalog=catalog.json`. The `catalog.json` file should be modified such that the field you want to include is marked as available and selected. For example, to add the `zipcode` field to the set of selected fields, change its breadcrumb to the following:
+
+```json
+{
+    "breadcrumb": [
+        "properties",
+        "zipcode"
+    ],
+    "metadata": {
+        "inclusion": "available",
+        "selected": true
+    }
+}
+```
+
+Alternatively, to modify the tap and permanently add a field to the default set of selected fields, add its name to `tap_bamboohr/selected_fields.json`. Or, if the field exists but is undocumented or not returned by `/meta/fields`, add its name and data type to `tap_bamboohr/merge_fields.json` to have it be merged into the default catalog (but not necessarily selected by default).
 
 ### Source Authentication and Authorization
 
