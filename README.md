@@ -78,7 +78,7 @@ Install Meltano (if you haven't already) and any needed plugins:
 # Install meltano
 pipx install meltano
 # Initialize meltano within this directory
-cd tap-clickup
+cd tap-bamboohr
 meltano install
 ```
 
@@ -86,9 +86,9 @@ Now you can test and orchestrate using Meltano:
 
 ```bash
 # Test invocation:
-meltano invoke tap-clickup --version
+meltano invoke tap-bamboohr --version
 # OR run a test `elt` pipeline:
-meltano elt tap-clickup target-jsonl
+meltano elt tap-bamboohr target-jsonl
 ```
 
 ### SDK
