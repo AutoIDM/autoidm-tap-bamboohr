@@ -53,7 +53,7 @@
                         "type": ["null","string"]
                 },
                 "canUploadPhoto": {
-                        "type": ["null","integer"]
+                        "type": ["null","boolean"]
                 },
                 "status": {
                         "type": ["null","string"]

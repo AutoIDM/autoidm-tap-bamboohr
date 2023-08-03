@@ -1,13 +1,20 @@
 """Stream class for tap-bamboohr."""
 
 import base64
+import json
 from typing import Dict, Optional, Any, Iterable
 from pathlib import Path
+import typing as t
 from singer_sdk import typing
 from functools import cached_property
-from singer_sdk.streams import RESTStream
+from singer_sdk._singerlib import MetadataMapping, StreamMetadata, Metadata
+from singer_sdk.streams.rest import RESTStream
 from singer_sdk.authenticators import SimpleAuthenticator
+import singer_sdk.helpers._catalog as catalog
+from singer_sdk.helpers.jsonpath import extract_jsonpath
 import requests
+from singer_sdk._singerlib import Schema
+from singer_sdk.tap_base import Tap
 
 
 SCHEMAS_DIR = Path(__file__).parent / Path("./schemas")
@@ -55,19 +62,196 @@ class CustomReport(TapBambooHRStream):
     records_jsonpath = "$.employees[*]"
     replication_key = None
     rest_method = "POST"
+    merge_fields: dict = {}
+
+    def __init__(
+        self,
+        tap: Tap,
+        name: str | None = None,
+        schema: dict[str, t.Any] | Schema | None = None,
+        path: str | None = None,
+        custom_report_config: dict = {},
+    ) -> None:
+        """This reimplements functionality of RESTStream's init method.
+
+        It also moves the definition of self._requests_session to before the call to its
+        superclass, because the Stream class calls schema during it's init method, but
+        this class's schema requires _request which requires requests_session which
+        requires _requests_session.
+        """
+        self.name = name
+        self._requests_session = requests.Session()
+        with open(str(Path(__file__).parent / Path("./merge_fields.json"))) as file:
+            self.merge_fields = json.load(file)
+        super(RESTStream, self).__init__(name=name, schema=schema, tap=tap)
+        self._custom_report_config = custom_report_config
+        if path:
+            self.path = path
+        self._http_headers: dict = {}
+        self._compiled_jsonpath = None
+        self._next_page_token_compiled_jsonpath = None
+
     @property
     def schema(self):
+        list_of_fields = self.field_list
+        list_of_properties = []
+        for field in list_of_fields:
+            list_of_properties.append(typing.Property(field["name"], field["type"]))
+        return typing.PropertiesList(*list_of_properties).to_dict()
+
+    @property
+    def metadata(self) -> MetadataMapping:
+        """Same as superclass property but marks some fields UNSUPPORTED."""
+        if self._metadata is not None:
+            return self._metadata
+
+        if self._tap_input_catalog:
+            catalog_entry = self._tap_input_catalog.get_stream(self.tap_stream_id)
+            if catalog_entry:
+                self._metadata = catalog_entry.metadata
+                return self._metadata
+
+        self._metadata = MetadataMapping()
+        key_properties = self.primary_keys or []
+        valid_replication_keys = (
+            [self.replication_key] if self.replication_key else None
+        )
+        root = StreamMetadata(
+            table_key_properties=self.primary_keys or [],
+            forced_replication_method=self.forced_replication_method,
+            valid_replication_keys=valid_replication_keys,
+            selected_by_default=self.selected_by_default,
+        )
+
+        with open(str(Path(__file__).parent / Path("./selected_fields.json"))) as file:
+            default_selected_fields: list = json.load(file)
+
+        if self.schema:
+            root.inclusion = Metadata.InclusionType.AVAILABLE
+
+            for field_name in self.schema.get("properties", {}):
+                if (
+                    key_properties
+                    and field_name in key_properties
+                    or (valid_replication_keys and field_name in valid_replication_keys)
+                ):
+                    entry = Metadata(inclusion=Metadata.InclusionType.AUTOMATIC)
+                elif field_name in default_selected_fields:
+                    entry = Metadata(inclusion=Metadata.InclusionType.AVAILABLE)
+                else:
+                    # TODO: Pending https://github.com/meltano/meltano/issues/2511, this
+                    # can be reimplemented with inclusion=AVAILABLE and
+                    # selected_by_default=False.
+                    entry = Metadata(inclusion=Metadata.InclusionType.UNSUPPORTED)
+
+                self._metadata[("properties", field_name)] = entry
+
+        self._metadata[()] = root
+
+        # If there's no input catalog, select all streams
+        self._metadata.root.selected = (
+            self._tap_input_catalog is None and self.selected_by_default
+        )
+
+        return self._metadata
+
+    @cached_property
+    def field_list(self):
         list_of_fields = []
-        for field in self.custom_report_config["fields"]:
-            list_of_fields.append(typing.Property(field, typing.StringType))
-        return typing.PropertiesList(*list_of_fields).to_dict()
 
+        session = requests.Session()
+        session.headers = super().authenticator.auth_headers
 
-    def __init__(self, name, custom_report_config, *args, **kwargs):
-        self.name = name
-        self._custom_report_config = custom_report_config
-        super().__init__(*args, **kwargs)
-    
+        # Decoration adds backoff-handling.
+        decorated_request = self.request_decorator(self._request)
+
+        meta_fields = session.prepare_request(
+            requests.Request(
+                "GET",
+                super().url_base + "/meta/fields",
+                {"Accept": "application/json"}, # Returns XML by default.
+            ),
+        )
+
+        result: requests.Response = decorated_request(meta_fields, None)
+        result_json = result.json()
+
+        for field in result_json:
+            # An alias is ideal since it is both user-friendly and unambiguous. If
+            # present it should be used.
+            if "alias" in field:
+                list_of_fields.append(
+                    {
+                        "name": self.canonical_field_name(field["alias"]),
+                        "type": self.bamboohr_type_to_jsonschema_type(field["type"]),
+                    }
+                )
+            # For fields that don't have an alias, the id could be in any number of
+            # formats so it needs to be canonicalized.
+            else:
+                field_name = self.canonical_field_name(field["id"])
+                list_of_fields.append(
+                    {
+                        "name": field_name,
+                        "type": self.bamboohr_type_to_jsonschema_type(field["type"]),
+                    }
+                )
+
+        # Not all fields are returned by /meta/fields. To be sure we get them all,
+        # additional fields are added from: https://documentation.bamboohr.com/docs/list-of-field-names
+        for k, v in self.merge_fields.items():
+            list_of_fields.append(
+                {
+                    "name": self.canonical_field_name(k),
+                    "type": self.bamboohr_type_to_jsonschema_type(v),
+                }
+            )
+        return list_of_fields
+
+    def canonical_field_name(self, field_name: int | str) -> str:
+        """Converts an ambiguous field name into a single unambiguous name.
+
+        Args:
+            field_name: The field name to convert. Can be in any of the following
+            formats: "name", "123", "123.0", or 123
+
+        Returns:
+            An unambiguous name in the format: "name" or "123.0".
+        """
+        if type(field_name) is str:
+            try:
+                field_name = int(field_name)
+            except ValueError:
+                return field_name
+        if type(field_name) is int:
+            return format(field_name, ".1f")
+        msg="Field name cannot be canonicalized because it is not int or str."
+        raise TypeError(msg)
+
+    def bamboohr_type_to_jsonschema_type(
+        self, bamboohr_type: str
+    ) -> typing.JSONTypeHelper:
+        """Converts a string representing a BambooHR type to the appropiate JSON type.
+
+        For further information, refer to: 
+        https://documentation.bamboohr.com/docs/field-types
+        but note that some field types remain undocumented and others are inconsistent
+        in the formatting of the values they return.
+
+        Args:
+            bamboohr_type: A string representing a BambooHR type.
+
+        Returns:
+            A JSON type matching the BambooHR type, defaulting to string for most types.
+        """
+        if bamboohr_type == "bool":
+            return typing.BooleanType
+        if bamboohr_type == "timestamp":
+            return typing.DateTimeType
+        if bamboohr_type == "date":
+            return typing.DateType
+        return typing.StringType
+
     @property
     def custom_report_config(self):
         return self._custom_report_config
@@ -90,9 +274,45 @@ class CustomReport(TapBambooHRStream):
         Returns:
             Dictionary with the body to use for the request.
         """
+        selected_schema = catalog.get_selected_schema(
+            stream_name=self.name,
+            schema=self.schema,
+            mask=self.mask,
+            logger=self.logger,
+        )
+        self._custom_report_config.update(
+            {"fields": [i for i in selected_schema["properties"]]}
+        )
         return self.custom_report_config
 
-#A more generic tables stream would be better, there is a table metadata api
+    def parse_response(self, response: requests.Response) -> Iterable[dict]:
+        json_response = response.json()
+
+        if self.config["field_mismatch"] == "fail":
+            fields_config = set(self.custom_report_config["fields"])
+            fields_returned = set(
+                [i for i in extract_jsonpath("$.fields[*].id", json_response)]
+            )
+            matching = fields_config.intersection(fields_returned)
+            config_diff = fields_config.difference(fields_returned)
+            returned_diff = fields_returned.difference(fields_config)
+            if fields_config != fields_returned:
+                msg = (
+                    f"The fields returned by the API for {self.name} did not match the "
+                    "fields selected. The matching fields were: "
+                    f"{matching if matching else 'N/A'}. The fields selected for a "
+                    "custom report but not returned were: "
+                    f"{config_diff if config_diff else 'N/A'}. The fields returned but "
+                    "not selected for a custom report were: "
+                    f"{returned_diff if returned_diff else 'N/A'}. To suppress this "
+                    "error, change the field_mismatch config option to 'ignore'."
+                )
+                raise RuntimeError(msg)
+
+        yield from extract_jsonpath(self.records_jsonpath, json_response)
+
+
+# A more generic tables stream would be better, there is a table metadata api
 class EmploymentHistoryStatus(TapBambooHRStream):
     name = "tables_employmentstatus"
     path = "/employees/changed/tables/employmentStatus"
@@ -119,7 +339,7 @@ class EmploymentHistoryStatus(TapBambooHRStream):
         """
         for employeeid, value in response.json()["employees"].items():
             last_changed = value["lastChanged"]
-            rows = value["rows"]
+            rows = value.get("rows", [])
             for row in rows:
                 row.update({"lastChanged":last_changed})
                 row.update({"employee_id":employeeid})
