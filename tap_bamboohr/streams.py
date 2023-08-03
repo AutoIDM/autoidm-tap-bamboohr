@@ -9,9 +9,9 @@ from singer_sdk import typing
 from functools import cached_property
 from singer_sdk._singerlib import MetadataMapping, StreamMetadata, Metadata
 from singer_sdk.streams.rest import RESTStream
-from singer_sdk.authenticators import SimpleAuthenticator
-import singer_sdk.helpers._catalog as catalog
+from singer_sdk.authenticators import BasicAuthenticator
 from singer_sdk.helpers.jsonpath import extract_jsonpath
+import singer_sdk.helpers._catalog as catalog
 import requests
 from singer_sdk._singerlib import Schema
 from singer_sdk.tap_base import Tap
@@ -40,13 +40,8 @@ class TapBambooHRStream(RESTStream):
 
     @property
     def authenticator(self):
-        http_headers = {}
         auth_token = self.config.get("auth_token")
-        basic_auth = f"{auth_token}:nothingtoseehere"
-        http_headers["Authorization"] = "Basic " + base64.b64encode(
-            basic_auth.encode("utf-8")
-        ).decode("utf-8")
-        return SimpleAuthenticator(stream=self, auth_headers=http_headers)
+        return BasicAuthenticator(stream=self, username=auth_token, password="foobar")
 
 class Employees(TapBambooHRStream):
     name = "employees"
