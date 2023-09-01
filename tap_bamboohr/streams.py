@@ -42,7 +42,28 @@ class TapBambooHRStream(RESTStream):
     @property
     def authenticator(self):
         auth_token = self.config.get("auth_token")
+        # Password can be any string; it doesn't matter.
         return BasicAuthenticator(stream=self, username=auth_token, password="foobar")
+    
+    @property
+    def temporal_fields(self) -> set:
+        fields = set()
+        for field, properties in self.schema["properties"].items():
+            if "format" in properties and properties["format"] in {"date", "time", "date-time"}:
+                fields.add(field)
+        return fields
+
+    def parse_response(self, response: requests.Response) -> Iterable[dict]:
+        for row in super().parse_response(response):
+            self.nullify_temporal_data(row, self.temporal_fields)
+            yield row
+        
+    def nullify_temporal_data(self, row: dict, temporal_fields: set) -> dict:
+        illegal_values = {"", "0000-00-00"}
+        for field in row:
+            if field in temporal_fields and row[field] in illegal_values:
+                row[field] = None
+        return row
 
 class Employees(TapBambooHRStream):
     name = "employees"
@@ -305,7 +326,9 @@ class CustomReport(TapBambooHRStream):
                 )
                 raise RuntimeError(msg)
 
-        yield from extract_jsonpath(self.records_jsonpath, json_response)
+        for row in extract_jsonpath(self.records_jsonpath, json_response):
+            self.nullify_temporal_data(row, self.temporal_fields)
+            yield row
 
 
 # A more generic tables stream would be better, there is a table metadata api
@@ -339,4 +362,5 @@ class EmploymentHistoryStatus(TapBambooHRStream):
             for row in rows:
                 row.update({"lastChanged":last_changed})
                 row.update({"employee_id":employeeid})
+                self.nullify_temporal_data(row, self.temporal_fields)
                 yield row
