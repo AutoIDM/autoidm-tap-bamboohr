@@ -1,13 +1,15 @@
 """BambooHR tap class."""
 
 from typing import List
-from singer_sdk import Tap, Stream
+
+from singer_sdk import Stream, Tap
 from singer_sdk import typing as th
 
 from tap_bamboohr.streams import (
-    Employees,
     CustomReport,
+    Employees,
     EmploymentHistoryStatus,
+    JobInfo,
 )
 
 PLUGIN_NAME = "tap-bamboohr"
@@ -15,6 +17,7 @@ PLUGIN_NAME = "tap-bamboohr"
 STREAM_TYPES = [ #CustomReport has special handing below
     Employees,
     EmploymentHistoryStatus,
+    JobInfo,
 ]
 
 
@@ -87,4 +90,5 @@ class TapBambooHR(Tap):
 
 # CLI Execution:
 
+cli = TapBambooHR.cli
 cli = TapBambooHR.cli
