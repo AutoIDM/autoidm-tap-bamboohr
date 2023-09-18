@@ -1,0 +1,31 @@
+{
+        "type": "object",
+        "properties": {
+                "employee_id": {
+                        "type": "string"
+                },
+                "lastChanged": {
+                        "type": "string",
+                        "format": "date-time"
+                },
+                "date": {
+                        "type": "string",
+                        "format": "date"
+                },
+                "location": {
+                        "type": "string"
+                },
+                "department": {
+                        "type": ["null","string"]
+                },
+                "division": {
+                        "type": ["null","string"]
+                },
+                "jobTitle": {
+                        "type": ["null","string"]
+                },
+                "reportsTo": {
+                        "type": ["null","string"]
+                }
+        }
+}
