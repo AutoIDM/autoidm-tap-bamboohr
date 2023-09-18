@@ -3,20 +3,19 @@ from __future__ import annotations
 
 import base64
 import json
-from typing import Dict, Optional, Any, Iterable
-from pathlib import Path
 import typing as t
-from singer_sdk import typing
 from functools import cached_property
-from singer_sdk._singerlib import MetadataMapping, StreamMetadata, Metadata
-from singer_sdk.streams.rest import RESTStream
+from pathlib import Path
+from typing import Any, Dict, Iterable, Optional
+
+import requests
+import singer_sdk.helpers._catalog as catalog
+from singer_sdk import typing
+from singer_sdk._singerlib import Metadata, MetadataMapping, Schema, StreamMetadata
 from singer_sdk.authenticators import BasicAuthenticator
 from singer_sdk.helpers.jsonpath import extract_jsonpath
-import singer_sdk.helpers._catalog as catalog
-import requests
-from singer_sdk._singerlib import Schema
+from singer_sdk.streams.rest import RESTStream
 from singer_sdk.tap_base import Tap
-
 
 SCHEMAS_DIR = Path(__file__).parent / Path("./schemas")
 
@@ -338,6 +337,39 @@ class EmploymentHistoryStatus(TapBambooHRStream):
     primary_keys = ["employee_id", "date", "employmentStatus"]
     replication_key = None
     schema_filepath = SCHEMAS_DIR / "employmentstatus.json"
+
+    def get_url_params(
+        self, context: Optional[dict], next_page_token: Optional[Any]
+    ) -> Dict[str, Any]:
+        return {"since":"2012-01-01T00:00:00Z"} #I want all of the data, 2012 is far enough back and referenced in the API Docs
+    
+    def parse_response(self, response: requests.Response) -> Iterable[dict]:
+        """Parse the response and return an iterator of result rows.
+
+        Args:
+            response: A raw `requests.Response`_ object.
+
+        Yields:
+            One item for every item found in the response.
+
+        .. _requests.Response:
+            https://docs.python-requests.org/en/latest/api/#requests.Response
+        """
+        for employeeid, value in response.json()["employees"].items():
+            last_changed = value["lastChanged"]
+            rows = value.get("rows", [])
+            for row in rows:
+                row.update({"lastChanged":last_changed})
+                row.update({"employee_id":employeeid})
+                self.nullify_temporal_data(row, self.temporal_fields)
+                yield row
+
+class JobInfo(TapBambooHRStream):
+    name = "tables_jobinfo"
+    path = "/employees/changed/tables/jobInfo"
+    primary_keys = ["employee_id", "date", "location"]
+    replication_key = None
+    schema_filepath = SCHEMAS_DIR / "jobinfo.json"
 
     def get_url_params(
         self, context: Optional[dict], next_page_token: Optional[Any]
