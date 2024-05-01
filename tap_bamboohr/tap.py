@@ -93,4 +93,3 @@ class TapBambooHR(Tap):
 # CLI Execution:
 
 cli = TapBambooHR.cli
-cli = TapBambooHR.cli
