@@ -23,5 +23,12 @@
     "workPhoneExtension",
     "workPhone",
     "displayName",
-    "supervisorEId"
+    "supervisorEId",
+    "address1",
+    "address2",
+    "city",
+    "state",
+    "stateCode",
+    "country",
+    "zipcode"
 ]

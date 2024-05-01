@@ -1,0 +1,38 @@
+{
+    "type": [
+        "null",
+        "object"
+    ],
+    "properties": {
+        "id": {
+            "type": [
+                "null",
+                "integer"
+            ]
+        },
+        "archived": {
+            "type": [
+                "null",
+                "string"
+            ]
+        },
+        "createdDate": {
+            "type": [
+                "null",
+                "string"
+            ]
+        },
+        "archivedDate": {
+            "type": [
+                "null",
+                "string"
+            ]
+        },
+        "name": {
+            "type": [
+                "null",
+                "string"
+            ]
+        }
+    }
+}

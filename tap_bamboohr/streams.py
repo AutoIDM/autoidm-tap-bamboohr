@@ -64,6 +64,33 @@ class TapBambooHRStream(RESTStream):
                 row[field] = None
         return row
 
+class Lists(TapBambooHRStream):
+    """Not for direct use: should be subclassed."""
+    path = "/meta/lists"
+    primary_keys = ["id"]
+    replication_key = None
+    schema_filepath = SCHEMAS_DIR / "lists.json"
+
+class JobTitles(Lists):
+    name = "jobtitles"
+    records_jsonpath = "$[?(@.alias=='jobTitle')].options[*]"
+
+class LocationsList(Lists):
+    name = "locations"
+    records_jsonpath = "$[?(@.alias=='location')].options[*]"
+
+class Divisions(Lists):
+    name = "divisions"
+    records_jsonpath = "$[?(@.alias=='division')].options[*]"
+
+class Departments(Lists):
+    name = "departments"
+    records_jsonpath = "$[?(@.alias=='department')].options[*]"
+
+class EmploymentStatuses(Lists):
+    name = "employmentstatuses"
+    records_jsonpath = "$[?(@.alias=='employmentHistoryStatus')].options[*]"
+
 class Employees(TapBambooHRStream):
     name = "employees"
     path = "/employees/directory"
@@ -71,6 +98,14 @@ class Employees(TapBambooHRStream):
     records_jsonpath = "$.employees[*]"
     replication_key = None
     schema_filepath = SCHEMAS_DIR / "directory.json"
+
+class LocationsDetail(TapBambooHRStream):
+    name = "locationdetails"
+    path = "/applicant_tracking/locations"
+    primary_keys = ["id"]
+    records_jsonpath = "$[*]"
+    replication_key = None
+    schema_filepath = SCHEMAS_DIR / "locations.json"
 
 class CustomReport(TapBambooHRStream):
     path = "/reports/custom"
