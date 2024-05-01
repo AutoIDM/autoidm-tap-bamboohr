@@ -72,6 +72,14 @@ class Employees(TapBambooHRStream):
     replication_key = None
     schema_filepath = SCHEMAS_DIR / "directory.json"
 
+class Locations(TapBambooHRStream):
+    name = "locations"
+    path = "/applicant_tracking/locations"
+    primary_keys = ["id"]
+    records_jsonpath = "$[*]"
+    replication_key = None
+    schema_filepath = SCHEMAS_DIR / "locations.json"
+
 class CustomReport(TapBambooHRStream):
     path = "/reports/custom"
     primary_keys = ["id"]

@@ -10,6 +10,7 @@ from tap_bamboohr.streams import (
     Employees,
     EmploymentHistoryStatus,
     JobInfo,
+    Locations,
 )
 
 PLUGIN_NAME = "tap-bamboohr"
@@ -18,6 +19,7 @@ STREAM_TYPES = [ #CustomReport has special handing below
     Employees,
     EmploymentHistoryStatus,
     JobInfo,
+    Locations,
 ]
 
 

@@ -1,0 +1,60 @@
+{
+    "type": ["object","null"],
+    "properties": {
+        "id": {
+            "type": ["string","null"]
+        },
+        "name": {
+            "type": ["string","null"]
+        },
+        "description": {
+            "type": ["string","null"]
+        },
+        "city": {
+            "type": ["string","null"]
+        },
+        "state": {
+            "type": ["object","null"],
+            "properties": {
+                "id": {
+                    "type": ["string","null"]
+                },
+                "name": {
+                    "type": ["string","null"]
+                },
+                "abbrev": {
+                    "type": ["string","null"]
+                },
+                "iso_code": {
+                    "type": ["string","null"]
+                }
+            }
+        },
+        "country": {
+            "type": ["object","null"],
+            "properties": {
+                "id": {
+                    "type": ["string","null"]
+                },
+                "name": {
+                    "type": ["string","null"]
+                },
+                "iso_code": {
+                    "type": ["string","null"]
+                }
+            }
+        },
+        "zipcode": {
+            "type": ["string","null"]
+        },
+        "addressLine1": {
+            "type": ["string","null"]
+        },
+        "addressLine2": {
+            "type": ["string","null"]
+        },
+        "phone": {
+            "type": ["string","null"]
+        }
+    }
+}
