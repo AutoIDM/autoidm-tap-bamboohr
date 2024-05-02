@@ -61,6 +61,16 @@ To select additional fields in a custom report, pass in a manually modified cata
 }
 ```
 
+You can also modify `meltano.yml` by adding metadata, accomplishing the same thing.
+
+```yml
+    metadata:
+      "CUSTOM REPORT NAME":
+        "customFIELDNAME":
+          "inclusion": "available"
+          "selected": true
+```
+
 Alternatively, to modify the tap and permanently add a field to the default set of selected fields, add its name to `tap_bamboohr/selected_fields.json`. Or, if the field exists but is undocumented or not returned by `/meta/fields`, add its name and data type to `tap_bamboohr/merge_fields.json` to have it be merged into the default catalog (but not necessarily selected by default).
 
 ### Source Authentication and Authorization
