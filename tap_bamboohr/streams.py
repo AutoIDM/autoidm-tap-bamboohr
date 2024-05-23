@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import base64
+import copy
 import json
 import typing as t
 from functools import cached_property
@@ -51,18 +52,43 @@ class TapBambooHRStream(RESTStream):
             if "format" in properties and properties["format"] in {"date", "time", "date-time"}:
                 fields.add(field)
         return fields
+    
+    @property
+    def boolean_fields(self) -> set:
+        fields = set()
+        for field, properties in self.schema["properties"].items():
+            if "boolean" in properties.get("type",[]):
+                fields.add(field)
+        return fields
 
     def parse_response(self, response: requests.Response) -> Iterable[dict]:
         for row in super().parse_response(response):
-            self.nullify_temporal_data(row, self.temporal_fields)
+            row = self.standardize_data(row)
             yield row
-        
-    def nullify_temporal_data(self, row: dict, temporal_fields: set) -> dict:
+
+    def standardize_data(self, row: dict) -> dict:
+        row_copy = copy.deepcopy(row)
+        row_copy = self.nullify_temporal_data(row=row_copy)
+        row_copy = self.standardize_boolean_data(row=row_copy)
+        return row_copy
+
+    def nullify_temporal_data(self, row: dict) -> dict:
+        row_copy = copy.deepcopy(row)
         illegal_values = {"", "0000-00-00"}
-        for field in row:
-            if field in temporal_fields and row[field] in illegal_values:
-                row[field] = None
-        return row
+        for field in row_copy:
+            if field in self.temporal_fields and row_copy[field] in illegal_values:
+                row_copy[field] = None
+        return row_copy
+    
+    def standardize_boolean_data(self, row: dict) -> dict:
+        row_copy = copy.deepcopy(row)
+        for field in row_copy:
+            if field in self.boolean_fields:
+                if row_copy[field] == "true":
+                    row_copy[field] = True
+                elif row_copy[field] == "false":
+                    row_copy[field] = False
+        return row_copy
 
 class Lists(TapBambooHRStream):
     """Not for direct use: should be subclassed."""
@@ -361,9 +387,55 @@ class CustomReport(TapBambooHRStream):
                 raise RuntimeError(msg)
 
         for row in extract_jsonpath(self.records_jsonpath, json_response):
-            self.nullify_temporal_data(row, self.temporal_fields)
+            row = self.standardize_data(row)
             yield row
 
+    def get_child_context(
+        self,
+        record: dict,
+        context: Optional[dict],  # noqa: ARG002
+    ) -> dict:
+        """Return a context dictionary for child streams."""
+        return {
+            "_sdc_id": record["id"],
+            "_sdc_isPhotoUploaded": record.get("isPhotoUploaded", False)
+        }
+
+class Photos(TapBambooHRStream):
+    name = "photos"
+    primary_keys = ["_sdc_id"]
+    records_jsonpath = "$[*]"
+    replication_key = None
+    schema_filepath = SCHEMAS_DIR / "photos.json"
+    parent_stream_type=CustomReport
+
+    @cached_property
+    def path(self):
+        photo_size = self.config["photo_size"]
+        valid_photo_sizes = ["original","large","medium","small","xs","tiny"]
+        if photo_size not in valid_photo_sizes:
+            raise ValueError(f"Photo size of `{photo_size}` is not valid.")
+        return f"/employees/{{_sdc_id}}/photo/{photo_size}"
+
+    def get_records(self, context: dict | None) -> t.Iterable[dict[str, t.Any]]:
+        """Override to provide no records if no photo exists.
+
+        Without this, the API fails with a 404.
+        """
+        if context.get("_sdc_isPhotoUploaded", False):
+            for record in self.request_records(context):
+                transformed_record = self.post_process(record, context)
+                if transformed_record is None:
+                    # Record filtered out during post_process()
+                    continue
+                yield transformed_record
+        else:
+            record = {"photo": None}
+            record.update(context)
+            yield record
+
+    def parse_response(self, response: requests.Response) -> Iterable[dict]:
+        yield {"photo": base64.b64encode(response.content).decode('utf-8')}
 
 # A more generic tables stream would be better, there is a table metadata api
 class EmploymentHistoryStatus(TapBambooHRStream):
@@ -396,7 +468,7 @@ class EmploymentHistoryStatus(TapBambooHRStream):
             for row in rows:
                 row.update({"lastChanged":last_changed})
                 row.update({"employee_id":employeeid})
-                self.nullify_temporal_data(row, self.temporal_fields)
+                row = self.standardize_data(row)
                 yield row
 
 class JobInfo(TapBambooHRStream):
@@ -429,5 +501,5 @@ class JobInfo(TapBambooHRStream):
             for row in rows:
                 row.update({"lastChanged":last_changed})
                 row.update({"employee_id":employeeid})
-                self.nullify_temporal_data(row, self.temporal_fields)
+                row = self.standardize_data(row)
                 yield row
