@@ -7,6 +7,7 @@ from singer_sdk import typing as th
 
 from tap_bamboohr.streams import (
     CustomReport,
+    Photos,
     Employees,
     EmploymentHistoryStatus,
     JobInfo,
@@ -21,6 +22,7 @@ from tap_bamboohr.streams import (
 PLUGIN_NAME = "tap-bamboohr"
 
 STREAM_TYPES = [  # CustomReport has special handing below
+    Photos,
     Employees,
     EmploymentHistoryStatus,
     JobInfo,
@@ -59,6 +61,17 @@ class TapBambooHR(Tap):
             description=(
                 "Either `fail` or `ignore`. Determines behavior when fields returned "
                 "by API don't match fields specified in tap config.",
+            ),
+        ),
+        th.Property(
+            "photo_size",
+            th.StringType,
+            allowed_values=["original", "large", "medium", "small", "xs", "tiny"],
+            required=True,
+            default="original",
+            description=(
+                "Size of photos to return from the photos stream. Pixel size "
+                "information can be found in the [docs](https://documentation.bamboohr.com/reference/get-employee-photo-1)"
             ),
         ),
         th.Property(

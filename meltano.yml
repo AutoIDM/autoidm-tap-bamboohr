@@ -2,7 +2,7 @@ version: 1
 send_anonymous_usage_stats: true
 project_id: 4935d052-aee1-46fa-89f0-a94cdc080064
 environments:
-  - name: dev
+- name: dev
 default_environment: dev
 plugins:
   extractors:
@@ -16,9 +16,12 @@ plugins:
     settings:
     - name: auth_token
       kind: password
+      sensitive: true
     - name: subdomain
       kind: string
     - name: field_mismatch
+      kind: string
+    - name: photo_size
       kind: string
     config:
       subdomain: autoidmtest
