@@ -73,6 +73,35 @@ You can also modify `meltano.yml` by adding metadata, accomplishing the same thi
 
 Alternatively, to modify the tap and permanently add a field to the default set of selected fields, add its name to `tap_bamboohr/selected_fields.json`. Or, if the field exists but is undocumented or not returned by `/meta/fields`, add its name and data type to `tap_bamboohr/merge_fields.json` to have it be merged into the default catalog (but not necessarily selected by default).
 
+### Syncing Photos
+
+Because the photos stream can significantly slow down the time it takes for a sync to complete, the photos stream has been deselected by default. Furthermore, because of https://github.com/meltano/meltano/issues/2511, this requires that the stream also be marked as UNSUPPORTED by default. That means that if you wish to sync the photos stream, you must modify the tap's metadata, similarly to selecting additional fields in a custom report.
+
+For example, you could modify the `catalog.json` file, changing the breadcrumb for the photos stream to be:
+
+```json
+{
+    "breadcrumb": [],
+    "metadata": {
+        "inclusion": "available",
+        "selected": true,
+        "selected-by-default": false,
+        "table-key-properties": [
+            "_sdc_id"
+        ]
+    }
+}
+```
+
+Or you could modify `meltano.yml` to accomplish the same thing.
+
+```yml
+    metadata:
+      "photos":
+        "inclusion": "available"
+        "selected": true
+```
+
 ### Source Authentication and Authorization
 
 - [ ] `TODO:` If your tap requires special access on the source system, or any special authentication requirements, provide those here.
