@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import base64
+import copy
 import json
 import typing as t
 from functools import cached_property
@@ -51,18 +52,43 @@ class TapBambooHRStream(RESTStream):
             if "format" in properties and properties["format"] in {"date", "time", "date-time"}:
                 fields.add(field)
         return fields
+    
+    @property
+    def boolean_fields(self) -> set:
+        fields = set()
+        for field, properties in self.schema["properties"].items():
+            if "boolean" in properties.get("type",[]):
+                fields.add(field)
+        return fields
 
     def parse_response(self, response: requests.Response) -> Iterable[dict]:
         for row in super().parse_response(response):
-            self.nullify_temporal_data(row, self.temporal_fields)
+            row = self.standardize_data(row)
             yield row
-        
-    def nullify_temporal_data(self, row: dict, temporal_fields: set) -> dict:
+
+    def standardize_data(self, row: dict) -> dict:
+        row_copy = copy.deepcopy(row)
+        row_copy = self.nullify_temporal_data(row=row_copy)
+        row_copy = self.standardize_boolean_data(row=row_copy)
+        return row_copy
+
+    def nullify_temporal_data(self, row: dict) -> dict:
+        row_copy = copy.deepcopy(row)
         illegal_values = {"", "0000-00-00"}
-        for field in row:
-            if field in temporal_fields and row[field] in illegal_values:
-                row[field] = None
-        return row
+        for field in row_copy:
+            if field in self.temporal_fields and row_copy[field] in illegal_values:
+                row_copy[field] = None
+        return row_copy
+    
+    def standardize_boolean_data(self, row: dict) -> dict:
+        row_copy = copy.deepcopy(row)
+        for field in row_copy:
+            if field in self.boolean_fields:
+                if row_copy[field] == "true":
+                    row_copy[field] = True
+                elif row_copy[field] == "false":
+                    row_copy[field] = False
+        return row_copy
 
 class Lists(TapBambooHRStream):
     """Not for direct use: should be subclassed."""
@@ -361,8 +387,135 @@ class CustomReport(TapBambooHRStream):
                 raise RuntimeError(msg)
 
         for row in extract_jsonpath(self.records_jsonpath, json_response):
-            self.nullify_temporal_data(row, self.temporal_fields)
+            row = self.standardize_data(row)
             yield row
+
+    def get_child_context(
+        self,
+        record: dict,
+        context: Optional[dict],  # noqa: ARG002
+    ) -> dict:
+        """Return a context dictionary for child streams."""
+        return {
+            "_sdc_id": record["id"],
+            "_sdc_isPhotoUploaded": record.get("isPhotoUploaded", False)
+        }
+
+class Photos(TapBambooHRStream):
+    name = "photos"
+    primary_keys = ["_sdc_id"]
+    records_jsonpath = "$[*]"
+    replication_key = None
+    schema_filepath = SCHEMAS_DIR / "photos.json"
+    parent_stream_type = CustomReport
+    selected_by_default = False  # This stream can slow down a sync significantly.
+
+    @cached_property
+    def path(self):
+        photo_size = self.config["photo_size"]
+        valid_photo_sizes = ["original","large","medium","small","xs","tiny"]
+        if photo_size not in valid_photo_sizes:
+            raise ValueError(f"Photo size of `{photo_size}` is not valid.")
+        return f"/employees/{{_sdc_id}}/photo/{photo_size}"
+
+    def get_records(self, context: dict | None) -> t.Iterable[dict[str, t.Any]]:
+        """Override to provide no records if no photo exists.
+
+        Without this, the API fails with a 404.
+        """
+        if context.get("_sdc_isPhotoUploaded", False):
+            for record in self.request_records(context):
+                transformed_record = self.post_process(record, context)
+                if transformed_record is None:
+                    # Record filtered out during post_process()
+                    continue
+                yield transformed_record
+        else:
+            record = {"photo": None}
+            record.update(context)
+            yield record
+
+    @property
+    def metadata(self) -> MetadataMapping:
+        """Same as superclass property but marks the stream as UNSUPPORTED.
+        
+        Required due to https://github.com/meltano/meltano/issues/2511
+        """
+        if self._metadata is not None:
+            return self._metadata
+
+        if self._tap_input_catalog:
+            catalog_entry = self._tap_input_catalog.get_stream(self.tap_stream_id)
+            if catalog_entry:
+                self._metadata = catalog_entry.metadata
+                return self._metadata
+
+        self._metadata = self.mark_as_unsupported_metadata(
+            schema=self.schema,
+            replication_method=self.forced_replication_method,
+            key_properties=self.primary_keys or [],
+            valid_replication_keys=(
+                [self.replication_key] if self.replication_key else None
+            ),
+            schema_name=None,
+            selected_by_default=self.selected_by_default,
+        )
+
+        # If there's no input catalog, select all streams
+        self._metadata.root.selected = (
+            self._tap_input_catalog is None and self.selected_by_default
+        )
+
+        return self._metadata
+
+    def mark_as_unsupported_metadata(
+        self,
+        schema: dict[str, t.Any] | None = None,
+        schema_name: str | None = None,
+        key_properties: list[str] | None = None,
+        valid_replication_keys: list[str] | None = None,
+        replication_method: str | None = None,
+        selected_by_default: bool | None = None,
+    ) -> MetadataMapping:
+        """Metadata override to mark a stream as unsupported.
+        
+        Same as MetadataMapping.get_standard_metadata() but marks the stream as
+        UNSUPPORTED.
+
+        Required due to https://github.com/meltano/meltano/issues/2511
+        """
+        mapping = MetadataMapping()
+        root = StreamMetadata(
+            table_key_properties=key_properties,
+            forced_replication_method=replication_method,
+            valid_replication_keys=valid_replication_keys,
+            selected_by_default=selected_by_default,
+        )
+
+        if schema:
+            root.inclusion = Metadata.InclusionType.UNSUPPORTED
+
+            if schema_name:
+                root.schema_name = schema_name
+
+            for field_name in schema.get("properties", {}):
+                if (
+                    key_properties
+                    and field_name in key_properties
+                    or (valid_replication_keys and field_name in valid_replication_keys)
+                ):
+                    entry = Metadata(inclusion=Metadata.InclusionType.AUTOMATIC)
+                else:
+                    entry = Metadata(inclusion=Metadata.InclusionType.AVAILABLE)
+
+                mapping[("properties", field_name)] = entry
+
+        mapping[()] = root
+
+        return mapping
+
+    def parse_response(self, response: requests.Response) -> Iterable[dict]:
+        yield {"photo": base64.b64encode(response.content).decode('utf-8')}
 
 class OffboardingTasks(CustomReport):
 
@@ -450,7 +603,7 @@ class EmploymentHistoryStatus(TapBambooHRStream):
             for row in rows:
                 row.update({"lastChanged":last_changed})
                 row.update({"employee_id":employeeid})
-                self.nullify_temporal_data(row, self.temporal_fields)
+                row = self.standardize_data(row)
                 yield row
 
 class JobInfo(TapBambooHRStream):
@@ -483,5 +636,5 @@ class JobInfo(TapBambooHRStream):
             for row in rows:
                 row.update({"lastChanged":last_changed})
                 row.update({"employee_id":employeeid})
-                self.nullify_temporal_data(row, self.temporal_fields)
+                row = self.standardize_data(row)
                 yield row

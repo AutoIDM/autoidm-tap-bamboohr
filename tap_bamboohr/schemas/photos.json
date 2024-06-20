@@ -1,0 +1,28 @@
+{
+    "type": [
+        "null",
+        "object"
+    ],
+    "properties": {
+        "_sdc_id": {
+            "type": [
+                "null",
+                "string"
+            ]
+        },
+        "_sdc_isPhotoUploaded": {
+            "type": [
+                "null",
+                "boolean"
+            ]
+        },
+        "photo": {
+            "type": [
+                "null",
+                "string"
+            ],
+            "contentEncoding": "base64",
+            "contentMediaType": "image/jpeg"
+        }
+    }
+}
