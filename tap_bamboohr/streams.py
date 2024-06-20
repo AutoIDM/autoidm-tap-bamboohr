@@ -548,6 +548,13 @@ class OffboardingTasks(CustomReport):
 
     @cached_property
     def field_list(self):
+        """Pverride to exclude /meta/fields and ./merge_fields.json.
+
+        If we attempted to define this stream using configuration in the meltano.yml
+        of a downstream target, all of the fields in /meta/fields and
+        ./merge_fields.json would be automatically added to the stream's field list, and
+        therefore, its schema.
+        """
         return [
             {
                 "name": "id",
