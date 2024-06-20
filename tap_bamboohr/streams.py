@@ -417,11 +417,7 @@ class OffboardingTasks(CustomReport):
     def post_process(self, row: Dict, context: Dict | None = None) -> Dict | None:
         if row["4140"] is None:
             return None
-        return {
-            "user_id": row["id"],
-            "task_name": row["4140"],
-            "task_due_date": row["4142"],
-        }
+        return row
 
 # A more generic tables stream would be better, there is a table metadata api
 class EmploymentHistoryStatus(TapBambooHRStream):
