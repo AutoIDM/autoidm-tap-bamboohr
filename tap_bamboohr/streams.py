@@ -1,7 +1,6 @@
 """Stream class for tap-bamboohr."""
 from __future__ import annotations
 
-import base64
 import json
 import typing as t
 from functools import cached_property
@@ -19,10 +18,12 @@ from singer_sdk.tap_base import Tap
 
 SCHEMAS_DIR = Path(__file__).parent / Path("./schemas")
 
+
 class TapBambooHRStream(RESTStream):
     """BambooHR stream class."""
 
     _LOG_REQUEST_METRIC_URLS: bool = True
+
     @property
     def url_base(self) -> str:
         subdomain = self.config.get("subdomain")
@@ -43,12 +44,16 @@ class TapBambooHRStream(RESTStream):
         auth_token = self.config.get("auth_token")
         # Password can be any string; it doesn't matter.
         return BasicAuthenticator(stream=self, username=auth_token, password="foobar")
-    
+
     @property
     def temporal_fields(self) -> set:
         fields = set()
         for field, properties in self.schema["properties"].items():
-            if "format" in properties and properties["format"] in {"date", "time", "date-time"}:
+            if "format" in properties and properties["format"] in {
+                "date",
+                "time",
+                "date-time",
+            }:
                 fields.add(field)
         return fields
 
@@ -56,7 +61,7 @@ class TapBambooHRStream(RESTStream):
         for row in super().parse_response(response):
             self.nullify_temporal_data(row, self.temporal_fields)
             yield row
-        
+
     def nullify_temporal_data(self, row: dict, temporal_fields: set) -> dict:
         illegal_values = {"", "0000-00-00"}
         for field in row:
@@ -64,32 +69,40 @@ class TapBambooHRStream(RESTStream):
                 row[field] = None
         return row
 
+
 class Lists(TapBambooHRStream):
     """Not for direct use: should be subclassed."""
+
     path = "/meta/lists"
     primary_keys = ["id"]
     replication_key = None
     schema_filepath = SCHEMAS_DIR / "lists.json"
 
+
 class JobTitles(Lists):
     name = "jobtitles"
     records_jsonpath = "$[?(@.alias=='jobTitle')].options[*]"
+
 
 class LocationsList(Lists):
     name = "locations"
     records_jsonpath = "$[?(@.alias=='location')].options[*]"
 
+
 class Divisions(Lists):
     name = "divisions"
     records_jsonpath = "$[?(@.alias=='division')].options[*]"
+
 
 class Departments(Lists):
     name = "departments"
     records_jsonpath = "$[?(@.alias=='department')].options[*]"
 
+
 class EmploymentStatuses(Lists):
     name = "employmentstatuses"
     records_jsonpath = "$[?(@.alias=='employmentHistoryStatus')].options[*]"
+
 
 class Employees(TapBambooHRStream):
     name = "employees"
@@ -99,6 +112,7 @@ class Employees(TapBambooHRStream):
     replication_key = None
     schema_filepath = SCHEMAS_DIR / "directory.json"
 
+
 class LocationsDetail(TapBambooHRStream):
     name = "locationdetails"
     path = "/applicant_tracking/locations"
@@ -106,6 +120,7 @@ class LocationsDetail(TapBambooHRStream):
     records_jsonpath = "$[*]"
     replication_key = None
     schema_filepath = SCHEMAS_DIR / "locations.json"
+
 
 class CustomReport(TapBambooHRStream):
     path = "/reports/custom"
@@ -220,7 +235,7 @@ class CustomReport(TapBambooHRStream):
             requests.Request(
                 "GET",
                 super().url_base + "/meta/fields",
-                {"Accept": "application/json"}, # Returns XML by default.
+                {"Accept": "application/json"},  # Returns XML by default.
             ),
         )
 
@@ -269,22 +284,23 @@ class CustomReport(TapBambooHRStream):
         Returns:
             An unambiguous name in the format: "name" or "123.0".
         """
-        if type(field_name) is str:
+        if not isinstance(field_name, (int, str)):
+            msg = "Field name cannot be canonicalized because it is not int or str."
+            raise TypeError(msg)
+        if isinstance(field_name, str):
             try:
                 field_name = int(field_name)
             except ValueError:
                 return field_name
-        if type(field_name) is int:
+        if isinstance(field_name, int):
             return format(field_name, ".1f")
-        msg="Field name cannot be canonicalized because it is not int or str."
-        raise TypeError(msg)
 
     def bamboohr_type_to_jsonschema_type(
         self, bamboohr_type: str
     ) -> typing.JSONTypeHelper:
         """Converts a string representing a BambooHR type to the appropiate JSON type.
 
-        For further information, refer to: 
+        For further information, refer to:
         https://documentation.bamboohr.com/docs/field-types
         but note that some field types remain undocumented and others are inconsistent
         in the formatting of the values they return.
@@ -310,8 +326,8 @@ class CustomReport(TapBambooHRStream):
     def get_url_params(
         self, context: Optional[dict], next_page_token: Optional[Any]
     ) -> Dict[str, Any]:
-        return {"format":"JSON"}
-    
+        return {"format": "JSON"}
+
     def prepare_request_payload(
         self, context: Optional[dict], next_page_token: Optional[Any]
     ) -> Optional[dict]:
@@ -376,8 +392,10 @@ class EmploymentHistoryStatus(TapBambooHRStream):
     def get_url_params(
         self, context: Optional[dict], next_page_token: Optional[Any]
     ) -> Dict[str, Any]:
-        return {"since":"2012-01-01T00:00:00Z"} #I want all of the data, 2012 is far enough back and referenced in the API Docs
-    
+        return {
+            "since": "2012-01-01T00:00:00Z"
+        }  # I want all of the data, 2012 is far enough back and referenced in the API Docs
+
     def parse_response(self, response: requests.Response) -> Iterable[dict]:
         """Parse the response and return an iterator of result rows.
 
@@ -394,10 +412,11 @@ class EmploymentHistoryStatus(TapBambooHRStream):
             last_changed = value["lastChanged"]
             rows = value.get("rows", [])
             for row in rows:
-                row.update({"lastChanged":last_changed})
-                row.update({"employee_id":employeeid})
+                row.update({"lastChanged": last_changed})
+                row.update({"employee_id": employeeid})
                 self.nullify_temporal_data(row, self.temporal_fields)
                 yield row
+
 
 class JobInfo(TapBambooHRStream):
     name = "tables_jobinfo"
@@ -409,8 +428,10 @@ class JobInfo(TapBambooHRStream):
     def get_url_params(
         self, context: Optional[dict], next_page_token: Optional[Any]
     ) -> Dict[str, Any]:
-        return {"since":"2012-01-01T00:00:00Z"} #I want all of the data, 2012 is far enough back and referenced in the API Docs
-    
+        return {
+            "since": "2012-01-01T00:00:00Z"
+        }  # I want all of the data, 2012 is far enough back and referenced in the API Docs
+
     def parse_response(self, response: requests.Response) -> Iterable[dict]:
         """Parse the response and return an iterator of result rows.
 
@@ -427,7 +448,7 @@ class JobInfo(TapBambooHRStream):
             last_changed = value["lastChanged"]
             rows = value.get("rows", [])
             for row in rows:
-                row.update({"lastChanged":last_changed})
-                row.update({"employee_id":employeeid})
+                row.update({"lastChanged": last_changed})
+                row.update({"employee_id": employeeid})
                 self.nullify_temporal_data(row, self.temporal_fields)
                 yield row
