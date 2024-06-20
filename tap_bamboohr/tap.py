@@ -68,7 +68,7 @@ class TapBambooHR(Tap):
         th.Property(
             "photo_size",
             th.StringType,
-            allowed_values=["original","large","medium","small","xs","tiny"],
+            allowed_values=["original", "large", "medium", "small", "xs", "tiny"],
             required=True,
             default="original",
             description=(
@@ -79,13 +79,13 @@ class TapBambooHR(Tap):
         th.Property(
             "photo_size",
             th.StringType,
-            allowed_values=["original","large","medium","small","xs","tiny"],
+            allowed_values=["original", "large", "medium", "small", "xs", "tiny"],
             required=True,
             default="original",
             description=(
                 "Size of photos to return from the photos stream. Pixel size "
                 "information can be found in the [docs](https://documentation.bamboohr.com/reference/get-employee-photo-1)"
-            )
+            ),
         ),
         th.Property(
             "custom_reports",
