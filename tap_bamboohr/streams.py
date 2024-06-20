@@ -407,7 +407,8 @@ class Photos(TapBambooHRStream):
     records_jsonpath = "$[*]"
     replication_key = None
     schema_filepath = SCHEMAS_DIR / "photos.json"
-    parent_stream_type=CustomReport
+    parent_stream_type = CustomReport
+    selected_by_default = False  # This stream can slow down a sync significantly.
 
     @cached_property
     def path(self):
@@ -433,6 +434,85 @@ class Photos(TapBambooHRStream):
             record = {"photo": None}
             record.update(context)
             yield record
+
+    @property
+    def metadata(self) -> MetadataMapping:
+        """Same as superclass property but marks the stream as UNSUPPORTED.
+        
+        Required due to https://github.com/meltano/meltano/issues/2511
+        """
+        if self._metadata is not None:
+            return self._metadata
+
+        if self._tap_input_catalog:
+            catalog_entry = self._tap_input_catalog.get_stream(self.tap_stream_id)
+            if catalog_entry:
+                self._metadata = catalog_entry.metadata
+                return self._metadata
+
+        self._metadata = self.mark_as_unsupported_metadata(
+            schema=self.schema,
+            replication_method=self.forced_replication_method,
+            key_properties=self.primary_keys or [],
+            valid_replication_keys=(
+                [self.replication_key] if self.replication_key else None
+            ),
+            schema_name=None,
+            selected_by_default=self.selected_by_default,
+        )
+
+        # If there's no input catalog, select all streams
+        self._metadata.root.selected = (
+            self._tap_input_catalog is None and self.selected_by_default
+        )
+
+        return self._metadata
+
+    def mark_as_unsupported_metadata(
+        self,
+        schema: dict[str, t.Any] | None = None,
+        schema_name: str | None = None,
+        key_properties: list[str] | None = None,
+        valid_replication_keys: list[str] | None = None,
+        replication_method: str | None = None,
+        selected_by_default: bool | None = None,
+    ) -> MetadataMapping:
+        """Metadata override to mark a stream as unsupported.
+        
+        Same as MetadataMapping.get_standard_metadata() but marks the stream as
+        UNSUPPORTED.
+
+        Required due to https://github.com/meltano/meltano/issues/2511
+        """
+        mapping = MetadataMapping()
+        root = StreamMetadata(
+            table_key_properties=key_properties,
+            forced_replication_method=replication_method,
+            valid_replication_keys=valid_replication_keys,
+            selected_by_default=selected_by_default,
+        )
+
+        if schema:
+            root.inclusion = Metadata.InclusionType.UNSUPPORTED
+
+            if schema_name:
+                root.schema_name = schema_name
+
+            for field_name in schema.get("properties", {}):
+                if (
+                    key_properties
+                    and field_name in key_properties
+                    or (valid_replication_keys and field_name in valid_replication_keys)
+                ):
+                    entry = Metadata(inclusion=Metadata.InclusionType.AUTOMATIC)
+                else:
+                    entry = Metadata(inclusion=Metadata.InclusionType.AVAILABLE)
+
+                mapping[("properties", field_name)] = entry
+
+        mapping[()] = root
+
+        return mapping
 
     def parse_response(self, response: requests.Response) -> Iterable[dict]:
         yield {"photo": base64.b64encode(response.content).decode('utf-8')}
