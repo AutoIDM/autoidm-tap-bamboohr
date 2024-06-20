@@ -22,7 +22,7 @@ from tap_bamboohr.streams import (
 
 PLUGIN_NAME = "tap-bamboohr"
 
-STREAM_TYPES = [ #CustomReport has special handing below
+STREAM_TYPES = [  # CustomReport has special handing below
     Photos,
     OffboardingTasks,
     Employees,
@@ -63,7 +63,18 @@ class TapBambooHR(Tap):
             description=(
                 "Either `fail` or `ignore`. Determines behavior when fields returned "
                 "by API don't match fields specified in tap config.",
-            )
+            ),
+        ),
+        th.Property(
+            "photo_size",
+            th.StringType,
+            allowed_values=["original","large","medium","small","xs","tiny"],
+            required=True,
+            default="original",
+            description=(
+                "Size of photos to return from the photos stream. Pixel size "
+                "information can be found in the [docs](https://documentation.bamboohr.com/reference/get-employee-photo-1)"
+            ),
         ),
         th.Property(
             "photo_size",
@@ -100,17 +111,19 @@ class TapBambooHR(Tap):
             description=(
                 "CustomReport full body definition, example in meltano.yml, same "
                 "format as the Body for the POST request [here](https://documentation.bamboohr.com/reference/request-custom-report-1)"
-            )
+            ),
         ),
     ).to_dict()
 
     def discover_streams(self) -> List[Stream]:
         """Return a list of discovered streams."""
-        streams =  [stream_class(tap=self) for stream_class in STREAM_TYPES]
-        custom_reports = self.config.get("custom_reports") 
-        if (custom_reports):
+        streams = [stream_class(tap=self) for stream_class in STREAM_TYPES]
+        custom_reports = self.config.get("custom_reports")
+        if custom_reports:
             for report in self.config.get("custom_reports"):
-                custom_report = CustomReport(tap=self, name=report["name"], custom_report_config=report)
+                custom_report = CustomReport(
+                    tap=self, name=report["name"], custom_report_config=report
+                )
                 streams.append(custom_report)
         return streams
 
