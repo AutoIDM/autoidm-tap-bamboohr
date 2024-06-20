@@ -545,7 +545,7 @@ class OffboardingTasks(CustomReport):
 
     name = "offboarding_tasks"
 
-    # ID is no longer a primary key because multiple records can exist with the same ID
+    # ID is not a primary key because multiple records can exist with the same ID
     # for different tasks, and we can't even define a composite primary key because an
     # employee can have multiple tasks with the same.
     primary_keys = []
