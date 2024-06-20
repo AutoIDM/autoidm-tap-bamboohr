@@ -31,10 +31,6 @@ plugins:
           lastChanged:
             includeNull: yes
             value: '2012-10-17T16:00:00Z'
-      photo_size: large
-    select:
-    - 'AutoIDM Employee Report.*'
-    - 'photos.*'
   loaders:
   - name: target-jsonl
     variant: andyh1203
