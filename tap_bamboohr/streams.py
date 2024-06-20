@@ -537,8 +537,18 @@ class Photos(TapBambooHRStream):
 
 
 class OffboardingTasks(CustomReport):
+    """List all offboarding tasks for all users.
+
+    This can't be defined as a CustomReport in config because of `self.primary_keys` and
+    `self.field_list`.
+    """
 
     name = "offboarding_tasks"
+
+    # ID is no longer a primary key because multiple records can exist with the same ID
+    # for different tasks, and we can't even define a composite primary key because an
+    # employee can have multiple tasks with the same.
+    primary_keys = []
 
     def __init__(
         self,
@@ -567,7 +577,7 @@ class OffboardingTasks(CustomReport):
 
     @cached_property
     def field_list(self):
-        """Pverride to exclude /meta/fields and ./merge_fields.json.
+        """Override to exclude /meta/fields and ./merge_fields.json.
 
         If we attempted to define this stream using configuration in the meltano.yml
         of a downstream target, all of the fields in /meta/fields and
