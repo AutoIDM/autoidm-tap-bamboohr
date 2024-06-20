@@ -102,6 +102,10 @@ Or you could modify `meltano.yml` to accomplish the same thing.
         "selected": true
 ```
 
+### Misaligned Dates for offboarding_tasks
+
+The BambooHR API provides dates for offboarding_tasks as 1 day before the date displayed in the UI. For example, if the date displayed in the UI for a task is "Jun 23, 2024", that task will appear in the API as "2024-06-22".
+
 ### Source Authentication and Authorization
 
 - [ ] `TODO:` If your tap requires special access on the source system, or any special authentication requirements, provide those here.
