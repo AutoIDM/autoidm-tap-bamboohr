@@ -7,6 +7,7 @@ from singer_sdk import typing as th
 
 from tap_bamboohr.streams import (
     CustomReport,
+    OffboardingTasks,
     Employees,
     EmploymentHistoryStatus,
     JobInfo,
@@ -21,6 +22,7 @@ from tap_bamboohr.streams import (
 PLUGIN_NAME = "tap-bamboohr"
 
 STREAM_TYPES = [ #CustomReport has special handing below
+    OffboardingTasks,
     Employees,
     EmploymentHistoryStatus,
     JobInfo,

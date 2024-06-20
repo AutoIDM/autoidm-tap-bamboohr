@@ -174,9 +174,6 @@ class CustomReport(TapBambooHRStream):
             selected_by_default=self.selected_by_default,
         )
 
-        with open(str(Path(__file__).parent / Path("./selected_fields.json"))) as file:
-            default_selected_fields: list = json.load(file)
-
         if self.schema:
             root.inclusion = Metadata.InclusionType.AVAILABLE
 
@@ -187,7 +184,7 @@ class CustomReport(TapBambooHRStream):
                     or (valid_replication_keys and field_name in valid_replication_keys)
                 ):
                     entry = Metadata(inclusion=Metadata.InclusionType.AUTOMATIC)
-                elif field_name in default_selected_fields:
+                elif field_name in self.default_selected_fields:
                     entry = Metadata(inclusion=Metadata.InclusionType.AVAILABLE)
                 else:
                     # TODO: Pending https://github.com/meltano/meltano/issues/2511, this
@@ -205,6 +202,11 @@ class CustomReport(TapBambooHRStream):
         )
 
         return self._metadata
+
+    @cached_property
+    def default_selected_fields(self) -> list:
+        with open(str(Path(__file__).parent / Path("./selected_fields.json"))) as file:
+            return json.load(file)
 
     @cached_property
     def field_list(self):
@@ -340,10 +342,8 @@ class CustomReport(TapBambooHRStream):
         json_response = response.json()
 
         if self.config["field_mismatch"] == "fail":
-            fields_config = set(self.custom_report_config["fields"])
-            fields_returned = set(
-                [i for i in extract_jsonpath("$.fields[*].id", json_response)]
-            )
+            fields_config = set([self.canonical_field_name(field) for field in self.custom_report_config["fields"]])
+            fields_returned = set([self.canonical_field_name(field) for field in extract_jsonpath("$.fields[*].id", json_response)])
             matching = fields_config.intersection(fields_returned)
             config_diff = fields_config.difference(fields_returned)
             returned_diff = fields_returned.difference(fields_config)
@@ -364,6 +364,64 @@ class CustomReport(TapBambooHRStream):
             self.nullify_temporal_data(row, self.temporal_fields)
             yield row
 
+class OffboardingTasks(CustomReport):
+
+    name = "offboarding_tasks"
+
+    def __init__(
+        self,
+        tap: Tap,
+        name: str | None = None,
+        schema: dict[str, t.Any] | Schema | None = None,
+        path: str | None = None,
+    ) -> None:
+        """This reimplements functionality of RESTStream's init method.
+
+        It also moves the definition of self._requests_session to before the call to its
+        superclass, because the Stream class calls schema during it's init method, but
+        this class's schema requires _request which requires requests_session which
+        requires _requests_session.
+        """
+        if name:
+            self.name = name
+        custom_report_config = {"name": self.name}
+        super().__init__(
+            tap=tap,
+            name=self.name,
+            schema=schema,
+            path=path,
+            custom_report_config=custom_report_config,
+        )
+
+    @cached_property
+    def field_list(self):
+        return [
+            {
+                "name": "id",
+                "type": self.bamboohr_type_to_jsonschema_type("int"),
+            },
+            {
+                "name": "4140",  # Tasks: Task name
+                "type": self.bamboohr_type_to_jsonschema_type("text"),
+            },
+            {
+                "name": "4142",  # Tasks: Due Date
+                "type": self.bamboohr_type_to_jsonschema_type("date")
+            },
+        ]
+
+    @cached_property
+    def default_selected_fields(self) -> list:
+        return ["id", "4140", "4142"]
+    
+    def post_process(self, row: Dict, context: Dict | None = None) -> Dict | None:
+        if row["4140"] is None:
+            return None
+        return {
+            "user_id": row["id"],
+            "task_name": row["4140"],
+            "task_due_date": row["4142"],
+        }
 
 # A more generic tables stream would be better, there is a table metadata api
 class EmploymentHistoryStatus(TapBambooHRStream):
