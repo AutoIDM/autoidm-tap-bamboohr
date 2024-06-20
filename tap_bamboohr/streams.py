@@ -1,6 +1,7 @@
 """Stream class for tap-bamboohr."""
 from __future__ import annotations
 
+import base64
 import copy
 import json
 import typing as t
@@ -62,15 +63,7 @@ class TapBambooHRStream(RESTStream):
     def boolean_fields(self) -> set:
         fields = set()
         for field, properties in self.schema["properties"].items():
-            if "boolean" in properties.get("type",[]):
-                fields.add(field)
-        return fields
-
-    @property
-    def boolean_fields(self) -> set:
-        fields = set()
-        for field, properties in self.schema["properties"].items():
-            if "boolean" in properties.get("type",[]):
+            if "boolean" in properties.get("type", []):
                 fields.add(field)
         return fields
 
@@ -422,8 +415,9 @@ class CustomReport(TapBambooHRStream):
         """Return a context dictionary for child streams."""
         return {
             "_sdc_id": record["id"],
-            "_sdc_isPhotoUploaded": record.get("isPhotoUploaded", False)
+            "_sdc_isPhotoUploaded": record.get("isPhotoUploaded", False),
         }
+
 
 class Photos(TapBambooHRStream):
     name = "photos"
@@ -437,7 +431,7 @@ class Photos(TapBambooHRStream):
     @cached_property
     def path(self):
         photo_size = self.config["photo_size"]
-        valid_photo_sizes = ["original","large","medium","small","xs","tiny"]
+        valid_photo_sizes = ["original", "large", "medium", "small", "xs", "tiny"]
         if photo_size not in valid_photo_sizes:
             raise ValueError(f"Photo size of `{photo_size}` is not valid.")
         return f"/employees/{{_sdc_id}}/photo/{photo_size}"
@@ -462,7 +456,7 @@ class Photos(TapBambooHRStream):
     @property
     def metadata(self) -> MetadataMapping:
         """Same as superclass property but marks the stream as UNSUPPORTED.
-        
+
         Required due to https://github.com/meltano/meltano/issues/2511
         """
         if self._metadata is not None:
@@ -502,7 +496,7 @@ class Photos(TapBambooHRStream):
         selected_by_default: bool | None = None,
     ) -> MetadataMapping:
         """Metadata override to mark a stream as unsupported.
-        
+
         Same as MetadataMapping.get_standard_metadata() but marks the stream as
         UNSUPPORTED.
 
@@ -539,7 +533,8 @@ class Photos(TapBambooHRStream):
         return mapping
 
     def parse_response(self, response: requests.Response) -> Iterable[dict]:
-        yield {"photo": base64.b64encode(response.content).decode('utf-8')}
+        yield {"photo": base64.b64encode(response.content).decode("utf-8")}
+
 
 # A more generic tables stream would be better, there is a table metadata api
 class EmploymentHistoryStatus(TapBambooHRStream):
@@ -572,8 +567,8 @@ class EmploymentHistoryStatus(TapBambooHRStream):
             last_changed = value["lastChanged"]
             rows = value.get("rows", [])
             for row in rows:
-                row.update({"lastChanged":last_changed})
-                row.update({"employee_id":employeeid})
+                row.update({"lastChanged": last_changed})
+                row.update({"employee_id": employeeid})
                 row = self.standardize_data(row)
                 yield row
 
@@ -608,7 +603,7 @@ class JobInfo(TapBambooHRStream):
             last_changed = value["lastChanged"]
             rows = value.get("rows", [])
             for row in rows:
-                row.update({"lastChanged":last_changed})
-                row.update({"employee_id":employeeid})
+                row.update({"lastChanged": last_changed})
+                row.update({"employee_id": employeeid})
                 row = self.standardize_data(row)
                 yield row
