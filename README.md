@@ -63,6 +63,10 @@ For example, to sync all Offboarding Tasks:
         "table-key-properties": []
 ```
 
+### Known API Issues
+
+Offboarding task due dates (field 4142) has off-by-one dates. The BambooHR API returns dates as 1 day before the date displayed in the UI. For example, if the date displayed in the UI for a task is "Jun 23, 2024", that task will appear in the API as "2024-06-22".
+
 ### Source Authentication and Authorization
 
 - [ ] `TODO:` If your tap requires special access on the source system, or any special authentication requirements, provide those here.
