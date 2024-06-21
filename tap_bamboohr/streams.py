@@ -237,7 +237,6 @@ class CustomReport(TapBambooHRStream):
     records_jsonpath = "$.employees[*]"
     replication_key = None
     rest_method = "POST"
-    merge_fields: dict = {}
 
     def __init__(
         self,
@@ -371,25 +370,24 @@ class CustomReport(TapBambooHRStream):
         return SinglePagePaginator()
 
 
-class PhotosUsers(CustomReport, UnselectedByDefault):
-
+class PhotosUsers(UnselectedByDefault, TapBambooHRStream):
     name = "photos_users"
+    primary_keys = ["id"]
+    records_jsonpath = "$.employees[*]"
+    replication_key = None
+    rest_method = "POST"
+    schema_filepath = SCHEMAS_DIR / "photos_users.json"
 
-    def __init__(
-        self,
-        tap: Tap,
-        name: str | None = None,
-        schema: dict[str, t.Any] | Schema | None = None,
-        path: str | None = None,
-    ) -> None:
-        self._custom_report_config = {
-            "name": "photos_users",
-            "fields": [
-                "id",
-                "isPhotoUploaded",
-            ]
-        }
-        super().__init__(name=name, schema=schema, tap=tap, path=path)
+    # Recommended path for pulling bulk employee data. From the doc: "If you're trying
+    # to get employee data in bulk (for all employees), we recommend using the request a
+    # custom report API."
+    # https://documentation.bamboohr.com/reference/get-employee
+    path = "/reports/custom"
+
+    # This stream can slow down a sync significantly. Note that just having
+    # selected_by_default set to False is not enough to truly deselect a Stream due to
+    # https://github.com/meltano/meltano/issues/2511
+    selected_by_default = False
 
     def get_child_context(
         self,
@@ -402,15 +400,38 @@ class PhotosUsers(CustomReport, UnselectedByDefault):
             "_sdc_isPhotoUploaded": record.get("isPhotoUploaded", False),
         }
 
+    def get_url_params(
+        self, context: Optional[dict], next_page_token: Optional[Any]
+    ) -> Dict[str, Any]:
+        return {"format": "JSON"}
 
-class Photos(TapBambooHRStream, UnselectedByDefault):
+    def prepare_request_payload(
+        self, context: Optional[dict], next_page_token: Optional[Any]
+    ) -> Optional[dict]:
+        return {
+            "name": "photos_users",
+            "fields": [
+                "id",
+                "isPhotoUploaded",
+            ],
+        }
+
+    def get_new_paginator(self) -> SinglePagePaginator:
+        return SinglePagePaginator()
+
+
+class Photos(UnselectedByDefault, TapBambooHRStream):
     name = "photos"
     primary_keys = ["_sdc_id"]
     records_jsonpath = "$[*]"
     replication_key = None
     schema_filepath = SCHEMAS_DIR / "photos.json"
     parent_stream_type = PhotosUsers
-    selected_by_default = False  # This stream can slow down a sync significantly.
+
+    # This stream can slow down a sync significantly. Note that just having
+    # selected_by_default set to False is not enough to truly deselect a Stream due to
+    # https://github.com/meltano/meltano/issues/2511
+    selected_by_default = False
 
     @cached_property
     def path(self):
