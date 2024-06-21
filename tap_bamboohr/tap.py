@@ -81,6 +81,8 @@ class TapBambooHR(Tap):
             th.ArrayType(
                 th.ObjectType(
                     th.Property("name", th.StringType),
+                    # Filters are optional.
+                    # Docs: https://documentation.bamboohr.com/reference/request-custom-report-1
                     th.Property(
                         "filters",
                         th.ObjectType(
