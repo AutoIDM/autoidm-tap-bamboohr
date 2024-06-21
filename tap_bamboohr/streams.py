@@ -177,13 +177,13 @@ class CustomReport(TapBambooHRStream):
 
     @cached_property
     def field_list(self):
-        list_of_fields = self.custom_report_config.get("fields", [])
+        list_of_field_names = self.custom_report_config.get("fields", [])
         list_of_field_dicts = []
-        for field in list_of_fields:
+        for field_name in list_of_field_names:
             list_of_field_dicts.append(
                 {
-                    "name": field,
-                    "type": self.get_field_type(field_name=field),
+                    "name": self.canonical_field_name(field_name=field_name),
+                    "type": self.get_field_type(field_name=field_name),
                 }
             )
         return list_of_field_dicts
@@ -296,16 +296,11 @@ class PhotosUsers(TapBambooHRStream):
     rest_method = "POST"
     schema_filepath = SCHEMAS_DIR / "photos_users.json"
 
-    # Recommended path for pulling bulk employee data. From the doc: "If you're trying
+    # Recommended path for pulling bulk employee data. From the docs: "If you're trying
     # to get employee data in bulk (for all employees), we recommend using the request a
     # custom report API."
     # https://documentation.bamboohr.com/reference/get-employee
     path = "/reports/custom"
-
-    # This stream can slow down a sync significantly. Note that just having
-    # selected_by_default set to False is not enough to truly deselect a Stream due to
-    # https://github.com/meltano/meltano/issues/2511
-    selected_by_default = False
 
     def get_child_context(
         self,
@@ -345,11 +340,6 @@ class Photos(TapBambooHRStream):
     replication_key = None
     schema_filepath = SCHEMAS_DIR / "photos.json"
     parent_stream_type = PhotosUsers
-
-    # This stream can slow down a sync significantly. Note that just having
-    # selected_by_default set to False is not enough to truly deselect a Stream due to
-    # https://github.com/meltano/meltano/issues/2511
-    selected_by_default = False
 
     @cached_property
     def path(self):
