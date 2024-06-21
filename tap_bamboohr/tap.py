@@ -80,7 +80,7 @@ class TapBambooHR(Tap):
             "custom_reports",
             th.ArrayType(
                 th.ObjectType(
-                    th.Property("name", th.StringType, required=True),
+                    th.Property("name", th.StringType),
                     th.Property(
                         "filters",
                         th.ObjectType(
@@ -144,11 +144,14 @@ class TapBambooHR(Tap):
     def discover_streams(self) -> List[Stream]:
         """Return a list of discovered streams."""
         streams = [stream_class(tap=self) for stream_class in STREAM_TYPES]
-        for report in self.config.get("custom_reports", []):
-            custom_report = CustomReport(
-                tap=self, name=report["name"], custom_report_config=report
+        for report_number, report in enumerate(self.config.get("custom_reports", [])):
+            streams.append(
+                CustomReport(
+                    tap=self,
+                    name=report.get("name", f"Custom Report #{report_number+1}"),
+                    custom_report_config=report,
+                )
             )
-            streams.append(custom_report)
         return streams
 
 
