@@ -1,6 +1,5 @@
 """BambooHR tap class."""
 
-import copy
 from typing import List
 
 from singer_sdk import Stream, Tap

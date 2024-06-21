@@ -262,8 +262,18 @@ class CustomReport(TapBambooHRStream):
         json_response = response.json()
 
         if self.config["field_mismatch"] == "fail":
-            fields_config = set([self.canonical_field_name(field) for field in self.custom_report_config["fields"]])
-            fields_returned = set([self.canonical_field_name(field) for field in extract_jsonpath("$.fields[*].id", json_response)])
+            fields_config = set(
+                [
+                    self.canonical_field_name(field)
+                    for field in self.custom_report_config["fields"]
+                ]
+            )
+            fields_returned = set(
+                [
+                    self.canonical_field_name(field)
+                    for field in extract_jsonpath("$.fields[*].id", json_response)
+                ]
+            )
             matching = fields_config.intersection(fields_returned)
             config_diff = fields_config.difference(fields_returned)
             returned_diff = fields_returned.difference(fields_config)
@@ -368,6 +378,7 @@ class Photos(TapBambooHRStream):
 
     def parse_response(self, response: requests.Response) -> Iterable[dict]:
         yield {"photo": base64.b64encode(response.content).decode("utf-8")}
+
 
 # A more generic tables stream would be better, there is a table metadata api
 class EmploymentHistoryStatus(TapBambooHRStream):
