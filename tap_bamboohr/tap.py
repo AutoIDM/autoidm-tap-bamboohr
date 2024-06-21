@@ -1,5 +1,6 @@
 """BambooHR tap class."""
 
+import copy
 from typing import List
 
 from singer_sdk import Stream, Tap
@@ -8,6 +9,7 @@ from singer_sdk import typing as th
 from tap_bamboohr.streams import (
     CustomReport,
     Photos,
+    PhotosUsers,
     Employees,
     EmploymentHistoryStatus,
     JobInfo,
@@ -23,6 +25,7 @@ PLUGIN_NAME = "tap-bamboohr"
 
 STREAM_TYPES = [  # CustomReport has special handing below
     Photos,
+    PhotosUsers,
     Employees,
     EmploymentHistoryStatus,
     JobInfo,
@@ -90,10 +93,52 @@ class TapBambooHR(Tap):
                                 ),
                             )
                         ),
-                        required=True,
+                    ),
+                    th.Property(
+                        "fields",
+                        th.ArrayType(th.StringType),
                     ),
                 )
             ),
+            default = [
+                {
+                    "name": "AutoIDM Employee Report",
+                    "fields": [
+                        "department",
+                        "division",
+                        "eeo",
+                        "employeeNumber",
+                        "employmentHistoryStatus",
+                        "employeeStatusDate",
+                        "firstName",
+                        "gender",
+                        "hireDate",
+                        "homeEmail",
+                        "homePhone",
+                        "jobTitle",
+                        "lastName",
+                        "linkedIn",
+                        "location",
+                        "mobilePhone",
+                        "originalHireDate",
+                        "payType",
+                        "preferredName",
+                        "status",
+                        "workEmail",
+                        "workPhoneExtension",
+                        "workPhone",
+                        "displayName",
+                        "supervisorEId",
+                        "address1",
+                        "address2",
+                        "city",
+                        "state",
+                        "stateCode",
+                        "country",
+                        "zipcode",
+                    ],
+                },
+            ],
             required=False,
             description=(
                 "CustomReport full body definition, example in meltano.yml, same "
@@ -105,13 +150,11 @@ class TapBambooHR(Tap):
     def discover_streams(self) -> List[Stream]:
         """Return a list of discovered streams."""
         streams = [stream_class(tap=self) for stream_class in STREAM_TYPES]
-        custom_reports = self.config.get("custom_reports")
-        if custom_reports:
-            for report in self.config.get("custom_reports"):
-                custom_report = CustomReport(
-                    tap=self, name=report["name"], custom_report_config=report
-                )
-                streams.append(custom_report)
+        for report in self.config.get("custom_reports", []):
+            custom_report = CustomReport(
+                tap=self, name=report["name"], custom_report_config=report
+            )
+            streams.append(custom_report)
         return streams
 
 
