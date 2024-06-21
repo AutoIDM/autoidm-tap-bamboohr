@@ -182,7 +182,7 @@ class CustomReport(TapBambooHRStream):
         for field_name in list_of_field_names:
             list_of_field_dicts.append(
                 {
-                    "name": self.canonical_field_name(field_name=field_name),
+                    "name": field_name,
                     "type": self.get_field_type(field_name=field_name),
                 }
             )
