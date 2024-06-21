@@ -26,6 +26,12 @@ plugins:
     - name: custom_reports
     config:
       subdomain: autoidmtest
+      custom_reports:
+      - name: AutoIDM Employee Report
+        filters:
+          lastChanged:
+            includeNull: yes
+            value: '2012-10-17T16:00:00Z'
   loaders:
   - name: target-jsonl
     variant: andyh1203
