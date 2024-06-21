@@ -22,6 +22,7 @@
     "division": "list",
     "eeo": "list",
     "employeeNumber": "text",
+    "employeeStatusDate": "date",
     "employmentHistoryStatus": "list",
     "ethnicity": "list",
     "exempt": "list",
