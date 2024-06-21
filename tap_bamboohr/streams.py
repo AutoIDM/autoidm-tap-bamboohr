@@ -11,7 +11,7 @@ from typing import Any, Dict, Iterable, Optional
 
 import requests
 from singer_sdk import typing
-from singer_sdk._singerlib import Metadata, MetadataMapping, Schema, StreamMetadata
+from singer_sdk._singerlib import Schema
 from singer_sdk.authenticators import BasicAuthenticator
 from singer_sdk.helpers.jsonpath import extract_jsonpath
 from singer_sdk.pagination import SinglePagePaginator
@@ -95,88 +95,6 @@ class TapBambooHRStream(RESTStream):
                 elif row_copy[field] == "false":
                     row_copy[field] = False
         return row_copy
-
-
-class UnselectedByDefault(RESTStream):
-
-    @property
-    def metadata(self) -> MetadataMapping:
-        """Same as superclass property but marks the stream as UNSUPPORTED.
-
-        Required due to https://github.com/meltano/meltano/issues/2511
-        """
-        if self._metadata is not None:
-            return self._metadata
-
-        if self._tap_input_catalog:
-            catalog_entry = self._tap_input_catalog.get_stream(self.tap_stream_id)
-            if catalog_entry:
-                self._metadata = catalog_entry.metadata
-                return self._metadata
-
-        self._metadata = self.mark_as_unsupported_metadata(
-            schema=self.schema,
-            replication_method=self.forced_replication_method,
-            key_properties=self.primary_keys or [],
-            valid_replication_keys=(
-                [self.replication_key] if self.replication_key else None
-            ),
-            schema_name=None,
-            selected_by_default=self.selected_by_default,
-        )
-
-        # If there's no input catalog, select all streams
-        self._metadata.root.selected = (
-            self._tap_input_catalog is None and self.selected_by_default
-        )
-
-        return self._metadata
-
-    def mark_as_unsupported_metadata(
-        self,
-        schema: dict[str, t.Any] | None = None,
-        schema_name: str | None = None,
-        key_properties: list[str] | None = None,
-        valid_replication_keys: list[str] | None = None,
-        replication_method: str | None = None,
-        selected_by_default: bool | None = None,
-    ) -> MetadataMapping:
-        """Metadata override to mark a stream as unsupported.
-
-        Same as MetadataMapping.get_standard_metadata() but marks the stream as
-        UNSUPPORTED.
-
-        Required due to https://github.com/meltano/meltano/issues/2511
-        """
-        mapping = MetadataMapping()
-        root = StreamMetadata(
-            table_key_properties=key_properties,
-            forced_replication_method=replication_method,
-            valid_replication_keys=valid_replication_keys,
-            selected_by_default=selected_by_default,
-        )
-
-        if schema:
-            root.inclusion = Metadata.InclusionType.UNSUPPORTED
-
-            if schema_name:
-                root.schema_name = schema_name
-
-            for field_name in schema.get("properties", {}):
-                if (
-                    key_properties
-                    and field_name in key_properties
-                    or (valid_replication_keys and field_name in valid_replication_keys)
-                ):
-                    entry = Metadata(inclusion=Metadata.InclusionType.AUTOMATIC)
-                else:
-                    entry = Metadata(inclusion=Metadata.InclusionType.AVAILABLE)
-
-                mapping[("properties", field_name)] = entry
-
-        mapping[()] = root
-
-        return mapping
 
 
 class Lists(TapBambooHRStream):
@@ -370,7 +288,7 @@ class CustomReport(TapBambooHRStream):
         return SinglePagePaginator()
 
 
-class PhotosUsers(UnselectedByDefault, TapBambooHRStream):
+class PhotosUsers(TapBambooHRStream):
     name = "photos_users"
     primary_keys = ["id"]
     records_jsonpath = "$.employees[*]"
@@ -420,7 +338,7 @@ class PhotosUsers(UnselectedByDefault, TapBambooHRStream):
         return SinglePagePaginator()
 
 
-class Photos(UnselectedByDefault, TapBambooHRStream):
+class Photos(TapBambooHRStream):
     name = "photos"
     primary_keys = ["_sdc_id"]
     records_jsonpath = "$[*]"
