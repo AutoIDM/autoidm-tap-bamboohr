@@ -59,8 +59,8 @@ For example, to sync all Offboarding Tasks:
         - '4140'
         - '4142'
     metadata:
-      "photos":
-        "table-key-properties": []
+      "offboarding_tasks":
+        "key_properties": []
 ```
 
 ### Known API Issues
