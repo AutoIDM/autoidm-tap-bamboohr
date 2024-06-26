@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "tap-bamboohr"
-version = "0.0.1"
+version = "0.0.1" # Not used.
 description = "`tap-bamboohr` is Singer-compliant BambooHR tap built with Singer SDK."
 authors = ["Derek Visch <dvisch@autoidm.com>"]
 license = "Apache v2"
