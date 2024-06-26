@@ -60,7 +60,7 @@ class TapBambooHR(Tap):
             default="fail",
             description=(
                 "Either `fail` or `ignore`. Determines behavior when fields returned "
-                "by API don't match fields specified in tap config.",
+                "by API don't match fields specified in tap config."
             ),
         ),
         th.Property(
