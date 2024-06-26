@@ -3,6 +3,7 @@ stages:
 
 release:
   stage: deploy
+  image: python:3.10
   script:
     - pip install poetry twine
     - poetry version minor # Should use an environment variable rather than hardcoding "minor" version bumps.
