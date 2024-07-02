@@ -1,25 +1,16 @@
 stages:
 - deploy
 
-publish:
+release:
   stage: deploy
   image: python:3.10
-  rules: 
-  - if: $CI_COMMIT_TAG
   script:
     - pip install poetry twine
     - poetry version ${CI_COMMIT_TAG}
     - poetry build
     - TWINE_PASSWORD=${CI_JOB_TOKEN} TWINE_USERNAME=gitlab-ci-token python -m twine upload --verbose --repository-url ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi dist/*
-
-release:
-  stage: deploy
-  needs: [publish]
-  image: registry.gitlab.com/gitlab-org/release-cli:latest
-  rules:
-    - if: $CI_COMMIT_TAG
-  script:
-    - echo "Creating a release..."
+  rules: 
+  - if: $CI_COMMIT_TAG
   release:
     tag_name: '$CI_COMMIT_TAG'
     description: '$CI_COMMIT_TAG'
