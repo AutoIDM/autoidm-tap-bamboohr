@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "tap-bamboohr"
-version = "0.0.1"
+version = "0.0.0"  # Not used. Our version is managed with poetry_dynamic_versioning.
 description = "`tap-bamboohr` is Singer-compliant BambooHR tap built with Singer SDK."
 authors = ["Derek Visch <dvisch@autoidm.com>"]
 license = "Apache v2"
@@ -27,8 +27,13 @@ multi_line_output = 3 # Vertical Hanging Indent
 src_paths = "tap_bamboohr"
 
 [build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["poetry-core>=1.9.0", "poetry-dynamic-versioning>=1.4.0"]
+build-backend = "poetry_dynamic_versioning.backend"
+
+[tool.poetry-dynamic-versioning]
+enable = true
+vcs = "git"
+style = "semver"
 
 [tool.poetry.scripts]
 # CLI declaration
