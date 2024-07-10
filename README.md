@@ -112,7 +112,7 @@ This Singer-compliant tap was created using the [Singer SDK](https://gitlab.com/
 
 ### Deploying New Versions
 
-To publish a new version of autoidm-tap-bamboohr, see the [handbook documentation](https://gitlab.com/autoidm/handbook/-/blob/master/processes.md?ref_type=heads#quality-control-program)
+To publish a new version of this plugin, see the [handbook documentation](https://gitlab.com/autoidm/handbook/-/blob/master/developer.md?ref_type=heads#publishing-a-new-version-of-a-tap-or-target)
 
 ### Testing with [Meltano](https://www.meltano.com)
 
