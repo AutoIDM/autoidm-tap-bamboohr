@@ -108,6 +108,12 @@ Or you could modify `meltano.yml` to accomplish the same thing.
 - [ ] `TODO:` If your tap requires special access on the source system, or any special authentication requirements, provide those here.
 This Singer-compliant tap was created using the [Singer SDK](https://gitlab.com/meltano/singer-sdk).
 
+## Dev Guide
+
+### Deploying New Versions
+
+To publish a new version of autoidm-tap-bamboohr, see the [handbook documentation](https://gitlab.com/autoidm/handbook/-/blob/master/processes.md?ref_type=heads#quality-control-program)
+
 ### Testing with [Meltano](https://www.meltano.com)
 
 _**Note:** This tap will work in any Singer environment and does not require Meltano.
