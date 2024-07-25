@@ -47,61 +47,26 @@ develop your own taps and targets.
 
 ### Selecting Additional Fields in a Custom Report
 
-To select additional fields in a custom report, pass in a manually modified catalog using a command like `meltano elt tap-bamboohr target-jsonl --catalog=catalog.json`. The `catalog.json` file should be modified such that the field you want to include is marked as available and selected. For example, to add the `zipcode` field to the set of selected fields, change its breadcrumb to the following:
+To select fields other than the default a custom report, simply update `meltano.yml` with the desired fields. Note that this sometimes requires the primary key for the custom report to be manually overridden, such as when multiple entries for the same user can be returned.
 
-```json
-{
-    "breadcrumb": [
-        "properties",
-        "zipcode"
-    ],
-    "metadata": {
-        "inclusion": "available",
-        "selected": true
-    }
-}
-```
-
-You can also modify `meltano.yml` by adding metadata, accomplishing the same thing.
+For example, to sync all Offboarding Tasks:
 
 ```yml
+    config:
+      custom_reports:
+      - name: offboarding_tasks
+        fields:
+        - id
+        - '4140'
+        - '4142'
     metadata:
-      "CUSTOM REPORT NAME":
-        "customFIELDNAME":
-          "inclusion": "available"
-          "selected": true
+      "offboarding_tasks":
+        "key_properties": []
 ```
 
-Alternatively, to modify the tap and permanently add a field to the default set of selected fields, add its name to `tap_bamboohr/selected_fields.json`. Or, if the field exists but is undocumented or not returned by `/meta/fields`, add its name and data type to `tap_bamboohr/merge_fields.json` to have it be merged into the default catalog (but not necessarily selected by default).
+### Known API Issues
 
-### Syncing Photos
-
-Because the photos stream can significantly slow down the time it takes for a sync to complete, the photos stream has been deselected by default. Furthermore, because of https://github.com/meltano/meltano/issues/2511, this requires that the stream also be marked as UNSUPPORTED by default. That means that if you wish to sync the photos stream, you must modify the tap's metadata, similarly to selecting additional fields in a custom report.
-
-For example, you could modify the `catalog.json` file, changing the breadcrumb for the photos stream to be:
-
-```json
-{
-    "breadcrumb": [],
-    "metadata": {
-        "inclusion": "available",
-        "selected": true,
-        "selected-by-default": false,
-        "table-key-properties": [
-            "_sdc_id"
-        ]
-    }
-}
-```
-
-Or you could modify `meltano.yml` to accomplish the same thing.
-
-```yml
-    metadata:
-      "photos":
-        "inclusion": "available"
-        "selected": true
-```
+Offboarding task due dates (field 4142) has off-by-one dates. The BambooHR API returns dates as 1 day before the date displayed in the UI. For example, if the date displayed in the UI for a task is "Jun 23, 2024", that task will appear in the API as "2024-06-22".
 
 ### Time Off and Holidays
 
