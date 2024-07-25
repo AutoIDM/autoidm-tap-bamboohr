@@ -15,7 +15,8 @@ Tap was created by [AutoIDM](https://autoidm.com). Check us out for tap/target c
 |:--------------------|:--------:|:-------:|:------------|
 | auth_token          | True     | None    | Token gathered from BambooHR, instructions are [here](https://documentation.bamboohr.com/docs#section-authentication) |
 | subdomain           | True     | None    | subdomain from BambooHR |
-| field_mismatch      | True     | fail    | Either `fail` or `ignore`. Determines behavior when fields returned by API don't match the requested fields. |
+| field_mismatch      | True     | fail    | Either `fail` or `ignore`. Determines behavior when fields returned by API don't match fields specified in tap config. |
+| photo_size          | True     | original | Size of photos to return from the photos stream. Pixel size information can be found in the [docs](https://documentation.bamboohr.com/reference/get-employee-photo-1) |
 | custom_reports      | False    | None    | CustomReport full body definition, example in meltano.yml, same format as the Body for the POST request [here](https://documentation.bamboohr.com/reference/request-custom-report-1) |
 | stream_maps         | False    | None    | Config object for stream maps capability. For more information check out [Stream Maps](https://sdk.meltano.com/en/latest/stream_maps.html). |
 | stream_map_config   | False    | None    | User-defined config values to be used within map expressions. |
