@@ -1,5 +1,6 @@
 """BambooHR tap class."""
 
+import datetime
 from typing import List
 
 from singer_sdk import Stream, Tap
@@ -17,6 +18,8 @@ from tap_bamboohr.streams import (
     Departments,
     EmploymentStatuses,
     LocationsDetail,
+    WhosOut,
+    TimeOffRequests,
 )
 
 PLUGIN_NAME = "tap-bamboohr"
@@ -32,6 +35,8 @@ STREAM_TYPES = [  # CustomReport has special handing below
     Departments,
     EmploymentStatuses,
     LocationsDetail,
+    WhosOut,
+    TimeOffRequests,
 ]
 
 

@@ -103,6 +103,10 @@ Or you could modify `meltano.yml` to accomplish the same thing.
         "selected": true
 ```
 
+### Time Off and Holidays
+
+To get full out-of-office information, both the `time_off_requests` and `whos_out` streams are required. Only `time_off_requests` shows information on the category (PTO, Bereavement, Floating Holiday) of request, and only `whos_out` shows holidays.
+
 ### Source Authentication and Authorization
 
 - [ ] `TODO:` If your tap requires special access on the source system, or any special authentication requirements, provide those here.
