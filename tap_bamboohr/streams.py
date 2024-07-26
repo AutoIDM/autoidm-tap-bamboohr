@@ -451,3 +451,35 @@ class JobInfo(TapBambooHRStream):
                 row.update({"employee_id": employeeid})
                 row = self.standardize_data(row)
                 yield row
+
+
+class WhosOut(TapBambooHRStream):
+    name = "whos_out"
+    path = "/time_off/whos_out"
+    primary_keys = ["id"]
+    replication_key = None
+    schema_filepath = SCHEMAS_DIR / "whos_out.json"
+
+    def get_url_params(
+        self, context: Optional[dict], next_page_token: Optional[Any]
+    ) -> Dict[str, Any]:
+        return {
+            "start": "1900-01-01",
+            "end": "2100-12-12"
+        }  # We want all of the data; these should be far enough in the future/past
+
+
+class TimeOffRequests(TapBambooHRStream):
+    name = "time_off_requests"
+    path = "/time_off/requests"
+    primary_keys = ["id"]
+    replication_key = None
+    schema_filepath = SCHEMAS_DIR / "time_off_requests.json"
+
+    def get_url_params(
+        self, context: Optional[dict], next_page_token: Optional[Any]
+    ) -> Dict[str, Any]:
+        return {
+            "start": "1900-01-01",
+            "end": "2100-12-12"
+        }  # We want all of the data; these should be far enough in the future/past

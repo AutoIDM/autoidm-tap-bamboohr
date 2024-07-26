@@ -68,6 +68,10 @@ For example, to sync all Offboarding Tasks:
 
 Offboarding task due dates (field 4142) has off-by-one dates. The BambooHR API returns dates as 1 day before the date displayed in the UI. For example, if the date displayed in the UI for a task is "Jun 23, 2024", that task will appear in the API as "2024-06-22".
 
+### Time Off and Holidays
+
+To get full out-of-office information, both the `time_off_requests` and `whos_out` streams are required. Only `time_off_requests` shows information on the category (PTO, Bereavement, Floating Holiday) of request, and only `whos_out` shows holidays.
+
 ### Source Authentication and Authorization
 
 - [ ] `TODO:` If your tap requires special access on the source system, or any special authentication requirements, provide those here.
