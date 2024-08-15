@@ -1,0 +1,63 @@
+{
+    "type": [
+        "object",
+        "null"
+    ],
+    "properties": {
+        "employee_id": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "lastChanged": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "format": "date-time"
+        },
+        "category": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "description": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "serialNumber": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "dateLoaned": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "dateReturned": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "cost": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "notes": {
+            "type": [
+                "string",
+                "null"
+            ]
+        }
+    }
+}
