@@ -420,27 +420,10 @@ class EmploymentHistoryStatus(TapBambooHRStream):
 # A more generic tables stream would be better, there is a table metadata api
 class EmployeeAssets(TapBambooHRStream):
     name = "tables_employeeassets"
-    path = "/employees/changed/tables/employeeAssets"
-    primary_keys = ["employee_id", "serialNumber"]
+    path = "/employees/all/tables/employeeAssets"
+    primary_keys = ["id"]
     replication_key = None
     schema_filepath = SCHEMAS_DIR / "employeeassets.json"
-
-    def get_url_params(
-        self, context: Optional[dict], next_page_token: Optional[Any]
-    ) -> Dict[str, Any]:
-        return {
-            "since": "1900-01-01T00:00:00Z", # All data
-        }
-
-    def parse_response(self, response: requests.Response) -> Iterable[dict]:
-        for employeeid, value in response.json()["employees"].items():
-            last_changed = value["lastChanged"]
-            rows = value.get("rows", [])
-            for row in rows:
-                row.update({"lastChanged": last_changed})
-                row.update({"employee_id": employeeid})
-                row = self.standardize_data(row)
-                yield row
 
 
 class JobInfo(TapBambooHRStream):

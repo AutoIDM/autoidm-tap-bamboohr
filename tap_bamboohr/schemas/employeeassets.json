@@ -4,18 +4,17 @@
         "null"
     ],
     "properties": {
-        "employee_id": {
+        "id": {
             "type": [
                 "string",
                 "null"
             ]
         },
-        "lastChanged": {
+        "employeeId": {
             "type": [
                 "string",
                 "null"
-            ],
-            "format": "date-time"
+            ]
         },
         "category": {
             "type": [
@@ -49,9 +48,23 @@
         },
         "cost": {
             "type": [
-                "string",
+                "object",
                 "null"
-            ]
+            ],
+            "properties": {
+                "currency": {
+                    "type": [
+                        "string",
+                        "null"
+                    ]
+                },
+                "value": {
+                    "type": [
+                        "string",
+                        "null"
+                    ]
+                }
+            }
         },
         "notes": {
             "type": [
