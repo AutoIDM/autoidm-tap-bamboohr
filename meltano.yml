@@ -32,8 +32,6 @@ plugins:
           lastChanged:
             includeNull: yes
             value: '2012-10-17T16:00:00Z'
-    select:
-    - "tables_employeeassets.*"
   loaders:
   - name: target-jsonl
     variant: andyh1203
