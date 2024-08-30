@@ -417,6 +417,15 @@ class EmploymentHistoryStatus(TapBambooHRStream):
                 yield row
 
 
+# A more generic tables stream would be better, there is a table metadata api
+class EmployeeAssets(TapBambooHRStream):
+    name = "tables_employeeassets"
+    path = "/employees/all/tables/employeeAssets"
+    primary_keys = ["id"]
+    replication_key = None
+    schema_filepath = SCHEMAS_DIR / "employeeassets.json"
+
+
 class JobInfo(TapBambooHRStream):
     name = "tables_jobinfo"
     path = "/employees/changed/tables/jobInfo"
