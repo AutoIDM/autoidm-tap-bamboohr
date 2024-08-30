@@ -1,0 +1,76 @@
+{
+    "type": [
+        "object",
+        "null"
+    ],
+    "properties": {
+        "id": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "employeeId": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "category": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "description": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "serialNumber": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "dateLoaned": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "dateReturned": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "cost": {
+            "type": [
+                "object",
+                "null"
+            ],
+            "properties": {
+                "currency": {
+                    "type": [
+                        "string",
+                        "null"
+                    ]
+                },
+                "value": {
+                    "type": [
+                        "string",
+                        "null"
+                    ]
+                }
+            }
+        },
+        "notes": {
+            "type": [
+                "string",
+                "null"
+            ]
+        }
+    }
+}
