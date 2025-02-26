@@ -372,7 +372,6 @@ class CustomReport(TapBambooHRStream):
             stream_name=self.name,
             schema=self.schema,
             mask=self.mask,
-            logger=self.logger,
         )
         self._custom_report_config.update(
             {"fields": [i for i in selected_schema["properties"]]}

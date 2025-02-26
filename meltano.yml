@@ -7,6 +7,7 @@ default_environment: dev
 plugins:
   extractors:
   - name: tap-bamboohr
+    cache_catalog: false
     namespace: tap_bamboohr
     executable: ./tap-bamboohr.sh
     capabilities:
