@@ -24,6 +24,7 @@ plugins:
       kind: string
     - name: photo_size
       kind: string
+    - name: custom_reports
     config:
       subdomain: autoidmtest
       custom_reports:

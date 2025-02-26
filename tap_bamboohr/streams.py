@@ -10,11 +10,11 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, Optional
 
 import requests
-import singer_sdk.helpers._catalog as catalog
 from singer_sdk import typing
-from singer_sdk._singerlib import Metadata, MetadataMapping, Schema, StreamMetadata
+from singer_sdk._singerlib import Schema
 from singer_sdk.authenticators import BasicAuthenticator
 from singer_sdk.helpers.jsonpath import extract_jsonpath
+from singer_sdk.pagination import SinglePagePaginator
 from singer_sdk.streams.rest import RESTStream
 from singer_sdk.tap_base import Tap
 
@@ -155,7 +155,6 @@ class CustomReport(TapBambooHRStream):
     records_jsonpath = "$.employees[*]"
     replication_key = None
     rest_method = "POST"
-    merge_fields: dict = {}
 
     def __init__(
         self,
@@ -165,24 +164,8 @@ class CustomReport(TapBambooHRStream):
         path: str | None = None,
         custom_report_config: dict = {},
     ) -> None:
-        """This reimplements functionality of RESTStream's init method.
-
-        It also moves the definition of self._requests_session to before the call to its
-        superclass, because the Stream class calls schema during it's init method, but
-        this class's schema requires _request which requires requests_session which
-        requires _requests_session.
-        """
-        self.name = name
-        self._requests_session = requests.Session()
-        with open(str(Path(__file__).parent / Path("./merge_fields.json"))) as file:
-            self.merge_fields = json.load(file)
-        super(RESTStream, self).__init__(name=name, schema=schema, tap=tap)
         self._custom_report_config = custom_report_config
-        if path:
-            self.path = path
-        self._http_headers: dict = {}
-        self._compiled_jsonpath = None
-        self._next_page_token_compiled_jsonpath = None
+        super().__init__(name=name, schema=schema, tap=tap, path=path)
 
     @property
     def schema(self):
@@ -192,114 +175,29 @@ class CustomReport(TapBambooHRStream):
             list_of_properties.append(typing.Property(field["name"], field["type"]))
         return typing.PropertiesList(*list_of_properties).to_dict()
 
-    @property
-    def metadata(self) -> MetadataMapping:
-        """Same as superclass property but marks some fields UNSUPPORTED."""
-        if self._metadata is not None:
-            return self._metadata
-
-        if self._tap_input_catalog:
-            catalog_entry = self._tap_input_catalog.get_stream(self.tap_stream_id)
-            if catalog_entry:
-                self._metadata = catalog_entry.metadata
-                return self._metadata
-
-        self._metadata = MetadataMapping()
-        key_properties = self.primary_keys or []
-        valid_replication_keys = (
-            [self.replication_key] if self.replication_key else None
-        )
-        root = StreamMetadata(
-            table_key_properties=self.primary_keys or [],
-            forced_replication_method=self.forced_replication_method,
-            valid_replication_keys=valid_replication_keys,
-            selected_by_default=self.selected_by_default,
-        )
-
-        with open(str(Path(__file__).parent / Path("./selected_fields.json"))) as file:
-            default_selected_fields: list = json.load(file)
-
-        if self.schema:
-            root.inclusion = Metadata.InclusionType.AVAILABLE
-
-            for field_name in self.schema.get("properties", {}):
-                if (
-                    key_properties
-                    and field_name in key_properties
-                    or (valid_replication_keys and field_name in valid_replication_keys)
-                ):
-                    entry = Metadata(inclusion=Metadata.InclusionType.AUTOMATIC)
-                elif field_name in default_selected_fields:
-                    entry = Metadata(inclusion=Metadata.InclusionType.AVAILABLE)
-                else:
-                    # TODO: Pending https://github.com/meltano/meltano/issues/2511, this
-                    # can be reimplemented with inclusion=AVAILABLE and
-                    # selected_by_default=False.
-                    entry = Metadata(inclusion=Metadata.InclusionType.UNSUPPORTED)
-
-                self._metadata[("properties", field_name)] = entry
-
-        self._metadata[()] = root
-
-        # If there's no input catalog, select all streams
-        self._metadata.root.selected = (
-            self._tap_input_catalog is None and self.selected_by_default
-        )
-
-        return self._metadata
-
     @cached_property
     def field_list(self):
-        list_of_fields = []
-
-        session = requests.Session()
-        session.headers = super().authenticator.auth_headers
-
-        # Decoration adds backoff-handling.
-        decorated_request = self.request_decorator(self._request)
-
-        meta_fields = session.prepare_request(
-            requests.Request(
-                "GET",
-                super().url_base + "/meta/fields",
-                {"Accept": "application/json"},  # Returns XML by default.
-            ),
-        )
-
-        result: requests.Response = decorated_request(meta_fields, None)
-        result_json = result.json()
-
-        for field in result_json:
-            # An alias is ideal since it is both user-friendly and unambiguous. If
-            # present it should be used.
-            if "alias" in field:
-                list_of_fields.append(
-                    {
-                        "name": self.canonical_field_name(field["alias"]),
-                        "type": self.bamboohr_type_to_jsonschema_type(field["type"]),
-                    }
-                )
-            # For fields that don't have an alias, the id could be in any number of
-            # formats so it needs to be canonicalized.
-            else:
-                field_name = self.canonical_field_name(field["id"])
-                list_of_fields.append(
-                    {
-                        "name": field_name,
-                        "type": self.bamboohr_type_to_jsonschema_type(field["type"]),
-                    }
-                )
-
-        # Not all fields are returned by /meta/fields. To be sure we get them all,
-        # additional fields are added from: https://documentation.bamboohr.com/docs/list-of-field-names
-        for k, v in self.merge_fields.items():
-            list_of_fields.append(
+        list_of_field_names = self.custom_report_config.get("fields", [])
+        list_of_field_dicts = []
+        for field_name in list_of_field_names:
+            list_of_field_dicts.append(
                 {
-                    "name": self.canonical_field_name(k),
-                    "type": self.bamboohr_type_to_jsonschema_type(v),
+                    "name": field_name,
+                    "type": self.get_field_type(field_name=field_name),
                 }
             )
-        return list_of_fields
+        return list_of_field_dicts
+
+    def get_field_type(self, field_name: str) -> str:
+        """Takes the name of a BambooHR field and finds its JSON data type.
+
+        Canonicalizes a field name, checks if its in the field_types.json file, and if
+        so, returns that type. Otherwise, returns string.
+        """
+        with open(str(Path(__file__).parent / Path("./field_types.json"))) as file:
+            return self.bamboohr_type_to_jsonschema_type(
+                json.load(file).get(self.canonical_field_name(field_name), "string")
+            )
 
     def canonical_field_name(self, field_name: int | str) -> str:
         """Converts an ambiguous field name into a single unambiguous name.
@@ -358,33 +256,23 @@ class CustomReport(TapBambooHRStream):
     def prepare_request_payload(
         self, context: Optional[dict], next_page_token: Optional[Any]
     ) -> Optional[dict]:
-        """Prepare the data payload for the REST API request.
-
-        Args:
-            context: Stream partition or context dictionary.
-            next_page_token: Token, page number or any request argument to request the
-                next page of data.
-
-        Returns:
-            Dictionary with the body to use for the request.
-        """
-        selected_schema = catalog.get_selected_schema(
-            stream_name=self.name,
-            schema=self.schema,
-            mask=self.mask,
-        )
-        self._custom_report_config.update(
-            {"fields": [i for i in selected_schema["properties"]]}
-        )
         return self.custom_report_config
 
     def parse_response(self, response: requests.Response) -> Iterable[dict]:
         json_response = response.json()
 
         if self.config["field_mismatch"] == "fail":
-            fields_config = set(self.custom_report_config["fields"])
+            fields_config = set(
+                [
+                    self.canonical_field_name(field)
+                    for field in self.custom_report_config["fields"]
+                ]
+            )
             fields_returned = set(
-                [i for i in extract_jsonpath("$.fields[*].id", json_response)]
+                [
+                    self.canonical_field_name(field)
+                    for field in extract_jsonpath("$.fields[*].id", json_response)
+                ]
             )
             matching = fields_config.intersection(fields_returned)
             config_diff = fields_config.difference(fields_returned)
@@ -406,6 +294,24 @@ class CustomReport(TapBambooHRStream):
             row = self.standardize_data(row)
             yield row
 
+    def get_new_paginator(self) -> SinglePagePaginator:
+        return SinglePagePaginator()
+
+
+class PhotosUsers(TapBambooHRStream):
+    name = "photos_users"
+    primary_keys = ["id"]
+    records_jsonpath = "$.employees[*]"
+    replication_key = None
+    rest_method = "POST"
+    schema_filepath = SCHEMAS_DIR / "photos_users.json"
+
+    # Recommended path for pulling bulk employee data. From the docs: "If you're trying
+    # to get employee data in bulk (for all employees), we recommend using the request a
+    # custom report API."
+    # https://documentation.bamboohr.com/reference/get-employee
+    path = "/reports/custom"
+
     def get_child_context(
         self,
         record: dict,
@@ -417,6 +323,25 @@ class CustomReport(TapBambooHRStream):
             "_sdc_isPhotoUploaded": record.get("isPhotoUploaded", False),
         }
 
+    def get_url_params(
+        self, context: Optional[dict], next_page_token: Optional[Any]
+    ) -> Dict[str, Any]:
+        return {"format": "JSON"}
+
+    def prepare_request_payload(
+        self, context: Optional[dict], next_page_token: Optional[Any]
+    ) -> Optional[dict]:
+        return {
+            "name": "photos_users",
+            "fields": [
+                "id",
+                "isPhotoUploaded",
+            ],
+        }
+
+    def get_new_paginator(self) -> SinglePagePaginator:
+        return SinglePagePaginator()
+
 
 class Photos(TapBambooHRStream):
     name = "photos"
@@ -424,8 +349,7 @@ class Photos(TapBambooHRStream):
     records_jsonpath = "$[*]"
     replication_key = None
     schema_filepath = SCHEMAS_DIR / "photos.json"
-    parent_stream_type = CustomReport
-    selected_by_default = False  # This stream can slow down a sync significantly.
+    parent_stream_type = PhotosUsers
 
     @cached_property
     def path(self):
@@ -451,85 +375,6 @@ class Photos(TapBambooHRStream):
             record = {"photo": None}
             record.update(context)
             yield record
-
-    @property
-    def metadata(self) -> MetadataMapping:
-        """Same as superclass property but marks the stream as UNSUPPORTED.
-
-        Required due to https://github.com/meltano/meltano/issues/2511
-        """
-        if self._metadata is not None:
-            return self._metadata
-
-        if self._tap_input_catalog:
-            catalog_entry = self._tap_input_catalog.get_stream(self.tap_stream_id)
-            if catalog_entry:
-                self._metadata = catalog_entry.metadata
-                return self._metadata
-
-        self._metadata = self.mark_as_unsupported_metadata(
-            schema=self.schema,
-            replication_method=self.forced_replication_method,
-            key_properties=self.primary_keys or [],
-            valid_replication_keys=(
-                [self.replication_key] if self.replication_key else None
-            ),
-            schema_name=None,
-            selected_by_default=self.selected_by_default,
-        )
-
-        # If there's no input catalog, select all streams
-        self._metadata.root.selected = (
-            self._tap_input_catalog is None and self.selected_by_default
-        )
-
-        return self._metadata
-
-    def mark_as_unsupported_metadata(
-        self,
-        schema: dict[str, t.Any] | None = None,
-        schema_name: str | None = None,
-        key_properties: list[str] | None = None,
-        valid_replication_keys: list[str] | None = None,
-        replication_method: str | None = None,
-        selected_by_default: bool | None = None,
-    ) -> MetadataMapping:
-        """Metadata override to mark a stream as unsupported.
-
-        Same as MetadataMapping.get_standard_metadata() but marks the stream as
-        UNSUPPORTED.
-
-        Required due to https://github.com/meltano/meltano/issues/2511
-        """
-        mapping = MetadataMapping()
-        root = StreamMetadata(
-            table_key_properties=key_properties,
-            forced_replication_method=replication_method,
-            valid_replication_keys=valid_replication_keys,
-            selected_by_default=selected_by_default,
-        )
-
-        if schema:
-            root.inclusion = Metadata.InclusionType.UNSUPPORTED
-
-            if schema_name:
-                root.schema_name = schema_name
-
-            for field_name in schema.get("properties", {}):
-                if (
-                    key_properties
-                    and field_name in key_properties
-                    or (valid_replication_keys and field_name in valid_replication_keys)
-                ):
-                    entry = Metadata(inclusion=Metadata.InclusionType.AUTOMATIC)
-                else:
-                    entry = Metadata(inclusion=Metadata.InclusionType.AVAILABLE)
-
-                mapping[("properties", field_name)] = entry
-
-        mapping[()] = root
-
-        return mapping
 
     def parse_response(self, response: requests.Response) -> Iterable[dict]:
         yield {"photo": base64.b64encode(response.content).decode("utf-8")}
@@ -572,6 +417,15 @@ class EmploymentHistoryStatus(TapBambooHRStream):
                 yield row
 
 
+# A more generic tables stream would be better, there is a table metadata api
+class EmployeeAssets(TapBambooHRStream):
+    name = "tables_employeeassets"
+    path = "/employees/all/tables/employeeAssets"
+    primary_keys = ["id"]
+    replication_key = None
+    schema_filepath = SCHEMAS_DIR / "employeeassets.json"
+
+
 class JobInfo(TapBambooHRStream):
     name = "tables_jobinfo"
     path = "/employees/changed/tables/jobInfo"
@@ -606,3 +460,35 @@ class JobInfo(TapBambooHRStream):
                 row.update({"employee_id": employeeid})
                 row = self.standardize_data(row)
                 yield row
+
+
+class WhosOut(TapBambooHRStream):
+    name = "whos_out"
+    path = "/time_off/whos_out"
+    primary_keys = ["id"]
+    replication_key = None
+    schema_filepath = SCHEMAS_DIR / "whos_out.json"
+
+    def get_url_params(
+        self, context: Optional[dict], next_page_token: Optional[Any]
+    ) -> Dict[str, Any]:
+        return {
+            "start": "1900-01-01",
+            "end": "2100-12-12"
+        }  # We want all of the data; these should be far enough in the future/past
+
+
+class TimeOffRequests(TapBambooHRStream):
+    name = "time_off_requests"
+    path = "/time_off/requests"
+    primary_keys = ["id"]
+    replication_key = None
+    schema_filepath = SCHEMAS_DIR / "time_off_requests.json"
+
+    def get_url_params(
+        self, context: Optional[dict], next_page_token: Optional[Any]
+    ) -> Dict[str, Any]:
+        return {
+            "start": "1900-01-01",
+            "end": "2100-12-12"
+        }  # We want all of the data; these should be far enough in the future/past

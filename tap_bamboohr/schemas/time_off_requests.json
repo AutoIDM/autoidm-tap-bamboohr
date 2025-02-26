@@ -1,0 +1,96 @@
+{
+    "type": ["object", "null"],
+    "properties": {
+        "id": {
+            "type": ["string", "null"]
+        },
+        "employeeId": {
+            "type": ["string", "null"]
+        },
+        "status": {
+            "type": ["object", "null"],
+            "properties": {
+                "lastChanged": {
+                    "type": ["string", "null"]
+                },
+                "lastChangedByUserId": {
+                    "type": ["string", "null"]
+                },
+                "status": {
+                    "type": ["string", "null"]
+                }
+            }
+        },
+        "name": {
+            "type": ["string", "null"]
+        },
+        "start": {
+            "type": ["string", "null"]
+        },
+        "end": {
+            "type": ["string", "null"]
+        },
+        "created": {
+            "type": ["string", "null"]
+        },
+        "type": {
+            "type": ["object", "null"],
+            "properties": {
+                "id": {
+                    "type": ["string", "null"]
+                },
+                "name": {
+                    "type": ["string", "null"]
+                },
+                "icon": {
+                    "type": ["string", "null"]
+                }
+            }
+        },
+        "amount": {
+            "type": ["object", "null"],
+            "properties": {
+                "unit": {
+                    "type": ["string", "null"]
+                },
+                "amount": {
+                    "type": ["string", "null"]
+                }
+            }
+        },
+        "actions": {
+            "type": ["object", "null"],
+            "properties": {
+                "view": {
+                    "type": ["boolean", "null"]
+                },
+                "edit": {
+                    "type": ["boolean", "null"]
+                },
+                "cancel": {
+                    "type": ["boolean", "null"]
+                },
+                "approve": {
+                    "type": ["boolean", "null"]
+                },
+                "deny": {
+                    "type": ["boolean", "null"]
+                },
+                "bypass": {
+                    "type": ["boolean", "null"]
+                }
+            }
+        },
+        "dates": {
+            "type": ["object", "null"]
+        },
+        "notes": {
+            "type": ["object", "null"],
+            "properties": {
+                "employee": {
+                    "type": ["string", "null"]
+                }
+            }
+        }
+    }
+}
