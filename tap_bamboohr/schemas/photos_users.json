@@ -1,0 +1,20 @@
+{
+    "type": [
+        "null",
+        "object"
+    ],
+    "properties": {
+        "id": {
+            "type": [
+                "null",
+                "string"
+            ]
+        },
+        "isPhotoUploaded": {
+            "type": [
+                "null",
+                "boolean"
+            ]
+        }
+    }
+}
