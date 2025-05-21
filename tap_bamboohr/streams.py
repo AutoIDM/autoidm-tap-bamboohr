@@ -378,7 +378,7 @@ class Photos(TapBambooHRStream):
                 record.update(context)
                 yield record
         except self.NoPhotoFound:
-            self.logger.info(f"No photo found for employee, skipping {context.get('_sdc_id')}")
+            self.logger.warning(f"No photo found for employee, skipping {context.get('_sdc_id')}")
             pass
 
     def parse_response(self, response: requests.Response) -> Iterable[dict]:
