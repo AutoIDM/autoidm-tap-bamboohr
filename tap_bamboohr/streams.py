@@ -6,6 +6,7 @@ import copy
 import json
 import typing as t
 from functools import cached_property
+from http import HTTPStatus
 from pathlib import Path
 from typing import Any, Dict, Iterable, Optional
 
@@ -364,20 +365,32 @@ class Photos(TapBambooHRStream):
 
         Without this, the API fails with a 404.
         """
-        if context.get("_sdc_isPhotoUploaded", False):
-            for record in self.request_records(context):
-                transformed_record = self.post_process(record, context)
+        try:
+            if context.get("_sdc_isPhotoUploaded", False):
+                for record in self.request_records(context):
+                    transformed_record = self.post_process(record, context)
                 if transformed_record is None:
                     # Record filtered out during post_process()
                     continue
                 yield transformed_record
-        else:
-            record = {"photo": None}
-            record.update(context)
-            yield record
+            else:
+                record = {"photo": None}
+                record.update(context)
+                yield record
+        except self.NoPhotoFound:
+            self.logger.info(f"No photo found for employee, skipping {context.get('_sdc_id')}")
+            pass
 
     def parse_response(self, response: requests.Response) -> Iterable[dict]:
         yield {"photo": base64.b64encode(response.content).decode("utf-8")}
+    
+    class NoPhotoFound(Exception):
+        pass
+
+    def validate_response(self, response: requests.Response) -> None:
+        if response.status_code == HTTPStatus.NOT_FOUND:
+            raise self.NoPhotoFound()
+        super().validate_response(response)
 
 
 # A more generic tables stream would be better, there is a table metadata api
