@@ -369,9 +369,9 @@ class Photos(TapBambooHRStream):
             if context.get("_sdc_isPhotoUploaded", False):
                 for record in self.request_records(context):
                     transformed_record = self.post_process(record, context)
-                if transformed_record is None:
-                    # Record filtered out during post_process()
-                    continue
+                    if transformed_record is None:
+                        # Record filtered out during post_process()
+                        continue
                 yield transformed_record
             else:
                 record = {"photo": None}
