@@ -8,14 +8,14 @@ plugins:
   extractors:
   - name: tap-bamboohr
     namespace: tap_bamboohr
-    executable: ./tap-bamboohr.sh
+    pip_url: -e .
     capabilities:
     - state
     - catalog
     - discover
     settings:
     - name: auth_token
-      kind: password
+      kind: string
       sensitive: true
     - name: subdomain
       kind: string
@@ -26,13 +26,18 @@ plugins:
     - name: custom_reports
     config:
       subdomain: autoidmtest
+      auth_token: ce65f28ef560eacf26d3623eb16257c1a165f211
       custom_reports:
       - name: AutoIDM Employee Report
         filters:
           lastChanged:
             includeNull: yes
             value: '2012-10-17T16:00:00Z'
+    select:
+    - goals.*
   loaders:
   - name: target-jsonl
     variant: andyh1203
     pip_url: target-jsonl
+    config:
+      destination_path: 'C:\git\autoidm-tap-bamboohr\target_data'

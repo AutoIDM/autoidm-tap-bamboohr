@@ -22,6 +22,8 @@ from tap_bamboohr.streams import (
     LocationsDetail,
     WhosOut,
     TimeOffRequests,
+    Goals,
+    EmployeeDependents
 )
 
 PLUGIN_NAME = "tap-bamboohr"
@@ -41,6 +43,8 @@ STREAM_TYPES = [  # CustomReport has special handing below
     LocationsDetail,
     WhosOut,
     TimeOffRequests,
+    Goals,
+    EmployeeDependents
 ]
 
 

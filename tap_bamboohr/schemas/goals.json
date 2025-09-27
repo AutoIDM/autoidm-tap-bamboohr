@@ -1,0 +1,38 @@
+{
+    "type": "object",
+    "properties": {
+        
+            "id": {
+                "type": "string"
+            },
+            "title": {
+                "type": ["null","string"]
+            },
+            "description": {
+                "type": ["null","string"]
+            },
+            "percentComplete": {
+                "type": "number"
+            },
+            "alignsWithOptionId": {
+                "type": ["null","number","string"]
+            },
+            "sharedWithEmployeeIds": {
+                "type": ["array","null"],
+                "items": { "type": "integer" }
+            },
+            "dueDate": {
+                "type": "string"
+            },
+            "completionDate": {
+                "type": ["null","string"]
+            },
+            "lastChangedDateTime": {
+                "type": "string"
+            },
+            "status": {
+                "type": "string"
+            }
+    }
+        
+}

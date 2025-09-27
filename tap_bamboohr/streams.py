@@ -140,6 +140,67 @@ class Employees(TapBambooHRStream):
     replication_key = None
     schema_filepath = SCHEMAS_DIR / "directory.json"
 
+    def get_child_context(
+        self,
+        record: dict,
+        context: Optional[dict],  # noqa: ARG002
+    ) -> dict:
+        """Return a context dictionary for child streams."""
+        return {
+            "employeeId": record["id"],
+        }
+
+
+#######################################################################
+class EmployeeDependents(TapBambooHRStream):
+    name = "employee_dependents"
+    path = "/employeedependents"
+    primary_keys = ["id"]
+    records_jsonpath = "$['Employee Dependents'][*]"
+    replication_key = None
+    schema_filepath = SCHEMAS_DIR / "employee_dependents.json"
+
+
+
+#######################################################################
+class Goals(TapBambooHRStream):
+    name = "goals" 
+    primary_keys = ["id"]
+    records_jsonpath = "$.goals[*]"
+    replication_key = None
+    schema_filepath = SCHEMAS_DIR / "goals.json"
+    parent_stream_type = Employees
+
+    @cached_property
+    def path(self):
+        return "/performance/employees/{employeeId}/goals"
+
+    class NoGoalsFound(Exception):
+        pass
+
+    def validate_response(self, response: requests.Response) -> None:
+        if response.status_code == HTTPStatus.NOT_FOUND:
+            raise self.NoGoalsFound()
+        super().validate_response(response)
+
+    def get_records(self, context: dict | None) -> t.Iterable[dict[str, t.Any]]:
+        try:
+            for record in self.request_records(context):
+                transformed_record = self.post_process(record, context)
+                if transformed_record is None:
+                    continue
+                yield transformed_record
+        except self.NoGoalsFound:
+            self.logger.warning(
+                f"No goals found for employee, skipping {context.get('employeeId')}"
+            )
+            return
+
+
+
+    
+
+
 
 class LocationsDetail(TapBambooHRStream):
     name = "locationdetails"
@@ -148,6 +209,11 @@ class LocationsDetail(TapBambooHRStream):
     records_jsonpath = "$[*]"
     replication_key = None
     schema_filepath = SCHEMAS_DIR / "locations.json"
+
+
+
+
+
 
 
 class CustomReport(TapBambooHRStream):
@@ -505,3 +571,4 @@ class TimeOffRequests(TapBambooHRStream):
             "start": "1900-01-01",
             "end": "2100-12-12"
         }  # We want all of the data; these should be far enough in the future/past
+

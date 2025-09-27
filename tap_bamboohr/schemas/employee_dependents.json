@@ -1,0 +1,64 @@
+{
+    "type": "object",
+    "properties": {
+        
+            "id": {
+                "type": "string"
+            },
+            "employeeId": {
+                "type": ["null","string"]
+            },
+            "firstName": {
+                "type": ["null","string"]
+            },
+            "middleName": {
+                "type": ["null","string"]
+            },
+            "lastName": {
+                "type": ["null","string"]
+            },
+            "relationship": {
+                "type": ["null","string"]
+            },
+            "gender": {
+                "type": ["null","string"]
+            },
+            "maskedSSN": {
+                "type": ["null","string"]
+            },
+            "maskedSIN": {
+                "type": ["null","string"]
+            },
+            "dateOfBirth": {
+                "type": ["null","string"]
+            },
+            "addressLine1": {
+                "type": ["null","string"]
+            },
+            "addressLine2": {
+                "type": ["null","string"]
+            },
+            "city": {
+                "type": ["null","string"]
+            },
+            "state": {
+                "type": ["null","string"]
+            },
+            "zipCode": {
+                "type": ["null","string"]
+            },
+            "homePhone": {
+                "type": ["null","string"]
+            },
+            "country": {
+                "type": ["null","string"]
+            },
+            "isUsCitizen": {
+                "type": ["null","string"]
+            },
+            "isStudent": {
+                "type": ["null","string"]
+            }
+    }
+        
+}
