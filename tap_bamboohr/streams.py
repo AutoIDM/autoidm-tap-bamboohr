@@ -151,7 +151,6 @@ class Employees(TapBambooHRStream):
         }
 
 
-#######################################################################
 class EmployeeDependents(TapBambooHRStream):
     name = "employee_dependents"
     path = "/employeedependents"
@@ -161,8 +160,6 @@ class EmployeeDependents(TapBambooHRStream):
     schema_filepath = SCHEMAS_DIR / "employee_dependents.json"
 
 
-
-#######################################################################
 class Goals(TapBambooHRStream):
     name = "goals" 
     primary_keys = ["id"]

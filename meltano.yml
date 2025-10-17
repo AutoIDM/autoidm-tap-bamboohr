@@ -15,7 +15,7 @@ plugins:
     - discover
     settings:
     - name: auth_token
-      kind: string
+      kind: password
       sensitive: true
     - name: subdomain
       kind: string
@@ -26,7 +26,6 @@ plugins:
     - name: custom_reports
     config:
       subdomain: autoidmtest
-      auth_token: ce65f28ef560eacf26d3623eb16257c1a165f211
       custom_reports:
       - name: AutoIDM Employee Report
         filters:
@@ -39,5 +38,3 @@ plugins:
   - name: target-jsonl
     variant: andyh1203
     pip_url: target-jsonl
-    config:
-      destination_path: 'C:\git\autoidm-tap-bamboohr\target_data'
