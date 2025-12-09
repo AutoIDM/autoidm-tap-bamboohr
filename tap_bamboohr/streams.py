@@ -1,21 +1,23 @@
 """Stream class for tap-bamboohr."""
+
 from __future__ import annotations
 
 import base64
 import copy
 import json
 import typing as t
+from collections.abc import Mapping
 from functools import cached_property
 from http import HTTPStatus
 from pathlib import Path
-from typing import Any, Dict, Iterable, Optional
+from typing import Any, Iterable
 
 import requests
 from singer_sdk import typing
-from singer_sdk._singerlib import Schema
 from singer_sdk.authenticators import BasicAuthenticator
 from singer_sdk.helpers.jsonpath import extract_jsonpath
 from singer_sdk.pagination import SinglePagePaginator
+from singer_sdk.singerlib import Schema
 from singer_sdk.streams.rest import RESTStream
 from singer_sdk.tap_base import Tap
 
@@ -189,7 +191,7 @@ class CustomReport(TapBambooHRStream):
             )
         return list_of_field_dicts
 
-    def get_field_type(self, field_name: str) -> str:
+    def get_field_type(self, field_name: str) -> type[typing.JSONTypeHelper]:
         """Takes the name of a BambooHR field and finds its JSON data type.
 
         Canonicalizes a field name, checks if its in the field_types.json file, and if
@@ -210,20 +212,18 @@ class CustomReport(TapBambooHRStream):
         Returns:
             An unambiguous name in the format: "name" or "123.0".
         """
-        if not isinstance(field_name, (int, str)):
-            msg = "Field name cannot be canonicalized because it is not int or str."
-            raise TypeError(msg)
-        if isinstance(field_name, str):
-            try:
-                field_name = int(field_name)
-            except ValueError:
-                return field_name
         if isinstance(field_name, int):
             return format(field_name, ".1f")
+        # field_name is str at this point
+        try:
+            numeric_value = int(field_name)
+            return format(numeric_value, ".1f")
+        except ValueError:
+            return field_name
 
     def bamboohr_type_to_jsonschema_type(
         self, bamboohr_type: str
-    ) -> typing.JSONTypeHelper:
+    ) -> type[typing.JSONTypeHelper]:
         """Converts a string representing a BambooHR type to the appropiate JSON type.
 
         For further information, refer to:
@@ -250,13 +250,13 @@ class CustomReport(TapBambooHRStream):
         return self._custom_report_config
 
     def get_url_params(
-        self, context: Optional[dict], next_page_token: Optional[Any]
-    ) -> Dict[str, Any]:
+        self, context: Mapping[str, Any] | None, next_page_token: Any | None
+    ) -> dict[str, Any]:
         return {"format": "JSON"}
 
     def prepare_request_payload(
-        self, context: Optional[dict], next_page_token: Optional[Any]
-    ) -> Optional[dict]:
+        self, context: Mapping[str, Any] | None, next_page_token: Any | None
+    ) -> dict | None:
         return self.custom_report_config
 
     def parse_response(self, response: requests.Response) -> Iterable[dict]:
@@ -316,7 +316,7 @@ class PhotosUsers(TapBambooHRStream):
     def get_child_context(
         self,
         record: dict,
-        context: Optional[dict],  # noqa: ARG002
+        context: Mapping[str, Any] | None,  # noqa: ARG002
     ) -> dict:
         """Return a context dictionary for child streams."""
         return {
@@ -325,13 +325,13 @@ class PhotosUsers(TapBambooHRStream):
         }
 
     def get_url_params(
-        self, context: Optional[dict], next_page_token: Optional[Any]
-    ) -> Dict[str, Any]:
+        self, context: Mapping[str, Any] | None, next_page_token: Any | None
+    ) -> dict[str, Any]:
         return {"format": "JSON"}
 
     def prepare_request_payload(
-        self, context: Optional[dict], next_page_token: Optional[Any]
-    ) -> Optional[dict]:
+        self, context: Mapping[str, Any] | None, next_page_token: Any | None
+    ) -> dict | None:
         return {
             "name": "photos_users",
             "fields": [
@@ -360,11 +360,15 @@ class Photos(TapBambooHRStream):
             raise ValueError(f"Photo size of `{photo_size}` is not valid.")
         return f"/employees/{{_sdc_id}}/photo/{photo_size}"
 
-    def get_records(self, context: dict | None) -> t.Iterable[dict[str, t.Any]]:
+    def get_records(
+        self, context: Mapping[str, t.Any] | None
+    ) -> t.Iterable[dict[str, t.Any]]:
         """Override to provide no records if no photo exists.
 
         Without this, the API fails with a 404.
         """
+        if context is None:
+            return
         try:
             if context.get("_sdc_isPhotoUploaded", False):
                 for record in self.request_records(context):
@@ -372,18 +376,19 @@ class Photos(TapBambooHRStream):
                     if transformed_record is None:
                         # Record filtered out during post_process()
                         continue
-                yield transformed_record
+                    yield transformed_record
             else:
-                record = {"photo": None}
-                record.update(context)
-                yield record
+                empty_photo_record: dict[str, t.Any] = {"photo": None}
+                empty_photo_record.update(context)
+                yield empty_photo_record
         except self.NoPhotoFound:
-            self.logger.warning(f"No photo found for employee, skipping {context.get('_sdc_id')}")
-            pass
+            self.logger.warning(
+                f"No photo found for employee, skipping {context.get('_sdc_id')}"
+            )
 
     def parse_response(self, response: requests.Response) -> Iterable[dict]:
         yield {"photo": base64.b64encode(response.content).decode("utf-8")}
-    
+
     class NoPhotoFound(Exception):
         pass
 
@@ -402,8 +407,8 @@ class EmploymentHistoryStatus(TapBambooHRStream):
     schema_filepath = SCHEMAS_DIR / "employmentstatus.json"
 
     def get_url_params(
-        self, context: Optional[dict], next_page_token: Optional[Any]
-    ) -> Dict[str, Any]:
+        self, context: Mapping[str, Any] | None, next_page_token: Any | None
+    ) -> dict[str, Any]:
         return {
             "since": "2012-01-01T00:00:00Z"
         }  # I want all of the data, 2012 is far enough back and referenced in the API Docs
@@ -447,8 +452,8 @@ class JobInfo(TapBambooHRStream):
     schema_filepath = SCHEMAS_DIR / "jobinfo.json"
 
     def get_url_params(
-        self, context: Optional[dict], next_page_token: Optional[Any]
-    ) -> Dict[str, Any]:
+        self, context: Mapping[str, Any] | None, next_page_token: Any | None
+    ) -> dict[str, Any]:
         return {
             "since": "2012-01-01T00:00:00Z"
         }  # I want all of the data, 2012 is far enough back and referenced in the API Docs
@@ -483,11 +488,11 @@ class WhosOut(TapBambooHRStream):
     schema_filepath = SCHEMAS_DIR / "whos_out.json"
 
     def get_url_params(
-        self, context: Optional[dict], next_page_token: Optional[Any]
-    ) -> Dict[str, Any]:
+        self, context: Mapping[str, Any] | None, next_page_token: Any | None
+    ) -> dict[str, Any]:
         return {
             "start": "1900-01-01",
-            "end": "2100-12-12"
+            "end": "2100-12-12",
         }  # We want all of the data; these should be far enough in the future/past
 
 
@@ -499,9 +504,9 @@ class TimeOffRequests(TapBambooHRStream):
     schema_filepath = SCHEMAS_DIR / "time_off_requests.json"
 
     def get_url_params(
-        self, context: Optional[dict], next_page_token: Optional[Any]
-    ) -> Dict[str, Any]:
+        self, context: Mapping[str, Any] | None, next_page_token: Any | None
+    ) -> dict[str, Any]:
         return {
             "start": "1900-01-01",
-            "end": "2100-12-12"
+            "end": "2100-12-12",
         }  # We want all of the data; these should be far enough in the future/past

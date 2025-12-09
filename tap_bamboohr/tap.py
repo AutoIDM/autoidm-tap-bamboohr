@@ -1,27 +1,24 @@
 """BambooHR tap class."""
 
-import datetime
-from typing import List
-
 from singer_sdk import Stream, Tap
 from singer_sdk import typing as th
 
 from tap_bamboohr.streams import (
     CustomReport,
-    Photos,
-    PhotosUsers,
+    Departments,
+    Divisions,
+    EmployeeAssets,
     Employees,
     EmploymentHistoryStatus,
+    EmploymentStatuses,
     JobInfo,
     JobTitles,
-    LocationsList,
-    Divisions,
-    Departments,
-    EmploymentStatuses,
-    EmployeeAssets,
     LocationsDetail,
-    WhosOut,
+    LocationsList,
+    Photos,
+    PhotosUsers,
     TimeOffRequests,
+    WhosOut,
 )
 
 PLUGIN_NAME = "tap-bamboohr"
@@ -151,14 +148,16 @@ class TapBambooHR(Tap):
         ),
     ).to_dict()
 
-    def discover_streams(self) -> List[Stream]:
+    def discover_streams(self) -> list[Stream]:
         """Return a list of discovered streams."""
-        streams = [stream_class(tap=self) for stream_class in STREAM_TYPES]
+        streams: list[Stream] = [
+            stream_class(tap=self) for stream_class in STREAM_TYPES
+        ]
         for report_number, report in enumerate(self.config.get("custom_reports", [])):
             streams.append(
                 CustomReport(
                     tap=self,
-                    name=report.get("name", f"Custom Report #{report_number+1}"),
+                    name=report.get("name", f"Custom Report #{report_number + 1}"),
                     custom_report_config=report,
                 )
             )
