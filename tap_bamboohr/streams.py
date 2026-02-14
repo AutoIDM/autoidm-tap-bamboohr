@@ -12,7 +12,7 @@ from typing import Any, Dict, Iterable, Optional
 
 import requests
 from singer_sdk import typing
-from singer_sdk._singerlib import Schema
+from singer_sdk.singerlib import Schema
 from singer_sdk.authenticators import BasicAuthenticator
 from singer_sdk.helpers.jsonpath import extract_jsonpath
 from singer_sdk.pagination import SinglePagePaginator
