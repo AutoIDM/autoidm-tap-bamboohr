@@ -6,7 +6,7 @@ authors = ["Derek Visch <dvisch@autoidm.com>"]
 license = "Apache v2"
 
 [tool.poetry.dependencies]
-python = "<3.11,>=3.7.1"
+python = ">=3.7.1"
 requests = "^2.25.1"
 singer-sdk = "0.29.0"
 setuptools = "<81"
