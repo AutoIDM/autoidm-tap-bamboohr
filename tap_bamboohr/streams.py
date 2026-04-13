@@ -14,6 +14,7 @@ import requests
 from singer_sdk import typing
 from singer_sdk._singerlib import Schema
 from singer_sdk.authenticators import BasicAuthenticator
+from singer_sdk.exceptions import RetriableAPIError
 from singer_sdk.helpers.jsonpath import extract_jsonpath
 from singer_sdk.pagination import SinglePagePaginator
 from singer_sdk.streams.rest import RESTStream
@@ -351,6 +352,14 @@ class Photos(TapBambooHRStream):
     replication_key = None
     schema_filepath = SCHEMAS_DIR / "photos.json"
     parent_stream_type = PhotosUsers
+    IMAGE_SIGNATURES = (
+        b"\xff\xd8\xff",  # JPEG
+        b"\x89PNG\r\n\x1a\n",
+        b"GIF87a",
+        b"GIF89a",
+        b"BM",  # BMP
+        b"RIFF",  # WEBP container
+    )
 
     @cached_property
     def path(self):
@@ -383,14 +392,27 @@ class Photos(TapBambooHRStream):
 
     def parse_response(self, response: requests.Response) -> Iterable[dict]:
         yield {"photo": base64.b64encode(response.content).decode("utf-8")}
-    
+
     class NoPhotoFound(Exception):
         pass
+
+    @classmethod
+    def is_image_response(cls, content: bytes) -> bool:
+        return any(content.startswith(signature) for signature in cls.IMAGE_SIGNATURES)
 
     def validate_response(self, response: requests.Response) -> None:
         if response.status_code == HTTPStatus.NOT_FOUND:
             raise self.NoPhotoFound()
         super().validate_response(response)
+        if not self.is_image_response(response.content):
+            content_type = response.headers.get("Content-Type", "")
+            preview = response.content[:80].decode("utf-8", errors="replace")
+            preview = preview.replace("\r", " ").replace("\n", " ").strip()
+            raise RetriableAPIError(
+                "Photo endpoint returned non-image content. "
+                f"Content-Type: {content_type!r}. Preview: {preview!r}",
+                response,
+            )
 
 
 # A more generic tables stream would be better, there is a table metadata api
