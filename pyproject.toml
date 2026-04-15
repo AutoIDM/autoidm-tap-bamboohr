@@ -9,6 +9,8 @@ license = "Apache v2"
 python = ">=3.10,<3.13"
 requests = "^2.25.1"
 singer-sdk = "^0.53.6"
+setuptools = "<81"
+
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.5"
