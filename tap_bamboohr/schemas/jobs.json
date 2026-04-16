@@ -1,0 +1,50 @@
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "title": {
+      "type": "object"
+    },
+    "postedDate": {
+      "type": "string"
+    },
+    "location": {
+      "type": "object"
+    },
+    "department": {
+      "type": "object"
+    },
+    "status": {
+      "type": "object"
+    },
+    "hiringLead": {
+      "type": "object"
+    },
+    "newApplicantsCount": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "activeApplicantsCount": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "totalApplicantsCount": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "postingUrl": {
+      "type": [
+        "null",
+        "string"
+      ]
+    }
+  }
+}
