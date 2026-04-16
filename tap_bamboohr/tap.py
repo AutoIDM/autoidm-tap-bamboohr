@@ -1,6 +1,5 @@
 """BambooHR tap class."""
 
-import datetime
 from typing import List
 
 from singer_sdk import Stream, Tap
@@ -53,7 +52,10 @@ class TapBambooHR(Tap):
             "auth_token",
             th.StringType,
             required=True,
-            description="Token gathered from BambooHR, instructions are [here](https://documentation.bamboohr.com/docs#section-authentication)",
+            description=(
+                "Token gathered from BambooHR, instructions are "
+                "[here](https://documentation.bamboohr.com/docs#section-authentication)"
+            ),
         ),
         th.Property(
             "subdomain",
@@ -80,7 +82,10 @@ class TapBambooHR(Tap):
             default="original",
             description=(
                 "Size of photos to return from the photos stream. Pixel size "
-                "information can be found in the [docs](https://documentation.bamboohr.com/reference/get-employee-photo-1)"
+                "information can be found in the "
+                "[docs]("
+                "https://documentation.bamboohr.com/reference/get-employee-photo-1"
+                ")"
             ),
         ),
         th.Property(
@@ -89,7 +94,8 @@ class TapBambooHR(Tap):
                 th.ObjectType(
                     th.Property("name", th.StringType),
                     # Filters are optional.
-                    # Docs: https://documentation.bamboohr.com/reference/request-custom-report-1
+                    # Docs:
+                    # https://documentation.bamboohr.com/reference/request-custom-report-1
                     th.Property(
                         "filters",
                         th.ObjectType(
@@ -146,19 +152,24 @@ class TapBambooHR(Tap):
             required=False,
             description=(
                 "CustomReport full body definition, example in meltano.yml, same "
-                "format as the Body for the POST request [here](https://documentation.bamboohr.com/reference/request-custom-report-1)"
+                "format as the Body for the POST request "
+                "[here]("
+                "https://documentation.bamboohr.com/reference/request-custom-report-1"
+                ")"
             ),
         ),
     ).to_dict()
 
     def discover_streams(self) -> List[Stream]:
         """Return a list of discovered streams."""
-        streams = [stream_class(tap=self) for stream_class in STREAM_TYPES]
+        streams: List[Stream] = [
+            stream_class(tap=self) for stream_class in STREAM_TYPES
+        ]
         for report_number, report in enumerate(self.config.get("custom_reports", [])):
             streams.append(
                 CustomReport(
                     tap=self,
-                    name=report.get("name", f"Custom Report #{report_number+1}"),
+                    name=report.get("name", f"Custom Report #{report_number + 1}"),
                     custom_report_config=report,
                 )
             )

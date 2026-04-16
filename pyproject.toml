@@ -6,19 +6,19 @@ authors = ["Derek Visch <dvisch@autoidm.com>"]
 license = "Apache v2"
 
 [tool.poetry.dependencies]
-python = ">=3.7.1"
+python = ">=3.10"
 requests = "^2.25.1"
-singer-sdk = "0.29.0"
-setuptools = "<81"
+singer-sdk = "^0.53.6"
+
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.5"
-tox = "^3.24.4"
-flake8 = "^3.9.2"
+tox = "^4.15.0"
+flake8 = "^7.0.0"
 ruff = "~=0.3.0"
 black = "~=22.0"
 pydocstyle = "^6.1.1"
-mypy = "^0.910"
+mypy = "^1.10.0"
 types-requests = "^2.26.1"
 isort = "^5.10.1"
 
