@@ -15,7 +15,7 @@ from singer_sdk import typing
 from singer_sdk._singerlib import Schema
 from singer_sdk.authenticators import BasicAuthenticator
 from singer_sdk.helpers.jsonpath import extract_jsonpath
-from singer_sdk.pagination import SinglePagePaginator
+from singer_sdk.pagination import BasePageNumberPaginator, SinglePagePaginator
 from singer_sdk.streams.rest import RESTStream
 from singer_sdk.tap_base import Tap
 
@@ -141,13 +141,105 @@ class Employees(TapBambooHRStream):
     schema_filepath = SCHEMAS_DIR / "directory.json"
 
 
+class _HrisLocationsPaginator(BasePageNumberPaginator):
+    # /hris/org/locations response.meta: {page, pageSize, totalPages, totalItems}.
+    #
+    # The public docs say the `page` query param "defaults to 0", implying
+    # 0-indexed pagination. That is misleading — empirically (verified on a
+    # live tenant) the endpoint is 1-indexed: page=0 returns HTTP 422, page=1
+    # returns the first record, and omitting the param is equivalent to page=1.
+    # So start_value=1 and `meta.page < meta.totalPages` are both correct.
+    # A defensive bonus: overshooting the last page returns HTTP 200 with an
+    # empty data array and meta.totalPages=0, so this condition halts cleanly
+    # even if BambooHR ever changes indexing or sizing.
+    def has_more(self, response: requests.Response) -> bool:
+        meta = (response.json() or {}).get("meta") or {}
+        return meta.get("page", 0) < meta.get("totalPages", 0)
+
+
 class LocationsDetail(TapBambooHRStream):
+    # Sources from /hris/org/locations (not /applicant_tracking/locations) because
+    # the HRIS endpoint returns remote locations and exposes address.remoteLocation.
+    #
+    # Record shape: the full HRIS response is passed through verbatim (label,
+    # archived, archivedAt, createdAt, manageable, address{...with expanded
+    # state/country}) so future HRIS fields — including new sub-fields BambooHR
+    # may add under address, state, or country — do not get silently dropped.
+    # Flat aliases (name, city, zipcode, addressLine1, addressLine2, state.abbrev,
+    # country.iso_code, phone, remoteLocation, description) are derived and added
+    # on top so existing consumers that read the old ATS shape keep working.
+    # Archived locations are filtered to match the ATS endpoint's historical
+    # behavior.
+    #
+    # UPGRADE NOTE (next major): drop the flat aliases from _build_record and
+    # locations.json. They exist only to avoid a breaking change for consumers
+    # that were wired up against the /applicant_tracking/locations shape. Once
+    # all downstream consumers have been cut over to read label / address.* /
+    # address.state.abbreviation directly, remove:
+    #   - the record.update({...}) block in _build_record
+    #   - the corresponding top-level properties in schemas/locations.json
+    #     (name, description, city, state, country, zipcode, addressLine1,
+    #      addressLine2, phone, remoteLocation)
+    # Leave the schema's address.remoteLocation in place; that's the HRIS-native
+    # field and not an alias.
     name = "locationdetails"
-    path = "/applicant_tracking/locations"
+    path = "/hris/org/locations"
     primary_keys = ["id"]
-    records_jsonpath = "$[*]"
+    records_jsonpath = "$.data[*]"
     replication_key = None
     schema_filepath = SCHEMAS_DIR / "locations.json"
+
+    def get_new_paginator(self) -> BasePageNumberPaginator:
+        return _HrisLocationsPaginator(start_value=1)
+
+    def get_url_params(
+        self, context: Optional[dict], next_page_token: Optional[Any]
+    ) -> Dict[str, Any]:
+        params: Dict[str, Any] = {"expand": "state,country"}
+        if next_page_token is not None:
+            params["page"] = next_page_token
+        return params
+
+    def parse_response(self, response: requests.Response) -> Iterable[dict]:
+        for row in extract_jsonpath(self.records_jsonpath, response.json()):
+            record = self._build_record(row)
+            if record is None:
+                continue
+            yield self.standardize_data(record)
+
+    @staticmethod
+    def _build_record(row: dict) -> Optional[dict]:
+        if row.get("archived"):
+            return None
+        address = row.get("address") or {}
+        state_src = address.get("state") or {}
+        country_src = address.get("country") or {}
+        record = dict(row)  # preserve full HRIS shape verbatim
+        record.update(
+            {
+                # Backwards-compatible flat aliases for existing consumers.
+                "name": row.get("label"),
+                "description": None,
+                "city": address.get("city"),
+                "state": {
+                    "id": state_src.get("id"),
+                    "name": state_src.get("name"),
+                    "abbrev": state_src.get("abbreviation"),
+                    "iso_code": None,
+                },
+                "country": {
+                    "id": country_src.get("id"),
+                    "name": country_src.get("name"),
+                    "iso_code": country_src.get("isoCode"),
+                },
+                "zipcode": address.get("zipcode"),
+                "addressLine1": address.get("address1"),
+                "addressLine2": address.get("address2"),
+                "phone": None,
+                "remoteLocation": address.get("remoteLocation"),
+            }
+        )
+        return record
 
 
 class CustomReport(TapBambooHRStream):
