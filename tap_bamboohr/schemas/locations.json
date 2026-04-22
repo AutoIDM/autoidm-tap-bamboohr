@@ -4,6 +4,80 @@
         "id": {
             "type": ["string","null"]
         },
+
+        "label": {
+            "type": ["string","null"]
+        },
+        "archived": {
+            "type": ["boolean","null"]
+        },
+        "archivedAt": {
+            "type": ["string","null"]
+        },
+        "createdAt": {
+            "type": ["string","null"]
+        },
+        "manageable": {
+            "type": ["boolean","null"]
+        },
+        "address": {
+            "type": ["object","null"],
+            "properties": {
+                "address1": {
+                    "type": ["string","null"]
+                },
+                "address2": {
+                    "type": ["string","null"]
+                },
+                "city": {
+                    "type": ["string","null"]
+                },
+                "stateId": {
+                    "type": ["string","null"]
+                },
+                "countryId": {
+                    "type": ["string","null"]
+                },
+                "zipcode": {
+                    "type": ["string","null"]
+                },
+                "timezone": {
+                    "type": ["string","null"]
+                },
+                "remoteLocation": {
+                    "type": ["boolean","null"]
+                },
+                "state": {
+                    "type": ["object","null"],
+                    "properties": {
+                        "id": {
+                            "type": ["string","null"]
+                        },
+                        "name": {
+                            "type": ["string","null"]
+                        },
+                        "abbreviation": {
+                            "type": ["string","null"]
+                        }
+                    }
+                },
+                "country": {
+                    "type": ["object","null"],
+                    "properties": {
+                        "id": {
+                            "type": ["string","null"]
+                        },
+                        "name": {
+                            "type": ["string","null"]
+                        },
+                        "isoCode": {
+                            "type": ["string","null"]
+                        }
+                    }
+                }
+            }
+        },
+
         "name": {
             "type": ["string","null"]
         },
@@ -55,6 +129,9 @@
         },
         "phone": {
             "type": ["string","null"]
+        },
+        "remoteLocation": {
+            "type": ["boolean","null"]
         }
     }
 }
