@@ -533,11 +533,3 @@ class TimeOffRequests(TapBambooHRStream):
             "start": "1900-01-01",
             "end": "2100-12-12",
         }  # We want all of the data; these should be far enough in the future/past
-
-class Jobs(TapBambooHRStream):
-    name = "jobs"
-    path = "/applicant_tracking/jobs?statusGroups=ALL"
-    primary_keys = ["id"]
-    records_jsonpath = "$[*]"
-    replication_key = None
-    schema_filepath = SCHEMAS_DIR / "jobs.json"
