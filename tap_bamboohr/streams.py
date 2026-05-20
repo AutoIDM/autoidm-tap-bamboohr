@@ -503,7 +503,7 @@ class Photos(TapBambooHRStream):
         try:
             with Image.open(BytesIO(content)) as image:
                 image.verify()
-        except (UnidentifiedImageError, OSError, ValueError):
+        except (UnidentifiedImageError, OSError, ValueError, SyntaxError):
             return False
         return True
 

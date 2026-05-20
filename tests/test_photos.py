@@ -121,6 +121,18 @@ def test_validate_response_rejects_signature_only_payload() -> None:
         stream.validate_response(make_response(content=FAKE_JPEG))
 
 
+def test_validate_response_rejects_png_with_corrupt_chunk() -> None:
+    # Pillow's verify() raises SyntaxError (not UnidentifiedImageError) when a
+    # PNG opens cleanly but has a bad chunk checksum. Make sure we still reject.
+    stream = make_stream()
+    corrupt = bytearray(RAW_PNG)
+    corrupt[len(corrupt) // 2] ^= 0xFF
+    with pytest.raises(FatalAPIError):
+        stream.validate_response(
+            make_response(content=bytes(corrupt), content_type="image/png")
+        )
+
+
 def test_validate_response_raises_no_photo_found_on_404() -> None:
     stream = make_stream()
     response = make_response(
