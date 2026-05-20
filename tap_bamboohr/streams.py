@@ -14,6 +14,7 @@ import requests
 from singer_sdk import typing
 from singer_sdk._singerlib import Schema
 from singer_sdk.authenticators import BasicAuthenticator
+from singer_sdk.exceptions import FatalAPIError
 from singer_sdk.helpers.jsonpath import extract_jsonpath
 from singer_sdk.pagination import BasePageNumberPaginator, SinglePagePaginator
 from singer_sdk.streams.rest import RESTStream
@@ -473,9 +474,44 @@ class Photos(TapBambooHRStream):
             self.logger.warning(f"No photo found for employee, skipping {context.get('_sdc_id')}")
             pass
 
+    IMAGE_SIGNATURES = (
+        b"\xff\xd8\xff",          # JPEG
+        b"\x89PNG\r\n\x1a\n",     # PNG
+        b"GIF87a",
+        b"GIF89a",
+        b"BM",                    # BMP
+        b"RIFF",                  # WEBP container
+    )
+
+    @property
+    def http_headers(self) -> dict:
+        # The parent stream sets Accept: application/json, which makes BambooHR
+        # return a {mimeType, fileBase64} JSON envelope instead of raw image
+        # bytes. Request raw bytes here.
+        headers = super().http_headers
+        headers["Accept"] = "image/*"
+        return headers
+
+    @staticmethod
+    def _try_parse_envelope(response: requests.Response) -> Optional[dict]:
+        """Return the response body as a {mimeType, fileBase64} dict, or None if it is not one."""
+        if response.content[:1] != b"{":
+            return None
+        try:
+            envelope = response.json()
+        except ValueError:
+            return None
+        if isinstance(envelope, dict) and "fileBase64" in envelope:
+            return envelope
+        return None
+
     def parse_response(self, response: requests.Response) -> Iterable[dict]:
-        yield {"photo": base64.b64encode(response.content).decode("utf-8")}
-    
+        envelope = self._try_parse_envelope(response)
+        if envelope is not None:
+            yield {"photo": envelope["fileBase64"]}
+        else:
+            yield {"photo": base64.b64encode(response.content).decode("utf-8")}
+
     class NoPhotoFound(Exception):
         pass
 
@@ -483,6 +519,21 @@ class Photos(TapBambooHRStream):
         if response.status_code == HTTPStatus.NOT_FOUND:
             raise self.NoPhotoFound()
         super().validate_response(response)
+        # Accept raw image bytes or the {mimeType, fileBase64} envelope. Reject
+        # anything else (e.g. HTML or XML error pages) so we don't store a
+        # non-image value that targets will fail on later.
+        content = response.content
+        if any(content.startswith(sig) for sig in self.IMAGE_SIGNATURES):
+            return
+        if self._try_parse_envelope(response) is not None:
+            return
+        content_type = response.headers.get("Content-Type", "")
+        preview = content[:80].decode("utf-8", errors="replace")
+        preview = preview.replace("\r", " ").replace("\n", " ").strip()
+        raise FatalAPIError(
+            "Photo endpoint returned unrecognized content. "
+            f"Content-Type: {content_type!r}. Preview: {preview!r}"
+        )
 
 
 # A more generic tables stream would be better, there is a table metadata api
