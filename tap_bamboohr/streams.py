@@ -2,15 +2,18 @@
 from __future__ import annotations
 
 import base64
+import binascii
 import copy
 import json
 import typing as t
 from functools import cached_property
 from http import HTTPStatus
+from io import BytesIO
 from pathlib import Path
 from typing import Any, Dict, Iterable, Optional
 
 import requests
+from PIL import Image, UnidentifiedImageError
 from singer_sdk import typing
 from singer_sdk.authenticators import BasicAuthenticator
 from singer_sdk.exceptions import RetriableAPIError
@@ -353,14 +356,6 @@ class Photos(TapBambooHRStream):
     replication_key = None
     schema_filepath = SCHEMAS_DIR / "photos.json"
     parent_stream_type = PhotosUsers
-    IMAGE_SIGNATURES = (
-        b"\xff\xd8\xff",  # JPEG
-        b"\x89PNG\r\n\x1a\n",
-        b"GIF87a",
-        b"GIF89a",
-        b"BM",  # BMP
-        b"RIFF",  # WEBP container
-    )
 
     @cached_property
     def path(self):
@@ -396,29 +391,69 @@ class Photos(TapBambooHRStream):
             )
             return
 
+    @property
+    def http_headers(self) -> dict:
+        # The parent stream sets Accept: application/json, which makes BambooHR
+        # return a {mimeType, fileBase64} JSON envelope instead of raw image
+        # bytes. Request raw bytes here.
+        headers = super().http_headers
+        headers["Accept"] = "image/*"
+        return headers
+
+    @staticmethod
+    def _try_parse_envelope(response: requests.Response) -> Optional[dict]:
+        """Return the response body as a {mimeType, fileBase64} dict, or None if it is not one."""
+        if response.content[:1] != b"{":
+            return None
+        try:
+            envelope = response.json()
+        except ValueError:
+            return None
+        if isinstance(envelope, dict) and "fileBase64" in envelope:
+            return envelope
+        return None
+
+    @staticmethod
+    def _is_valid_image(content: bytes) -> bool:
+        try:
+            with Image.open(BytesIO(content)) as image:
+                image.verify()
+        except (UnidentifiedImageError, OSError, ValueError, SyntaxError):
+            return False
+        return True
+
     def parse_response(self, response: requests.Response) -> Iterable[dict]:
-        yield {"photo": base64.b64encode(response.content).decode("utf-8")}
+        envelope = self._try_parse_envelope(response)
+        if envelope is not None:
+            yield {"photo": envelope["fileBase64"]}
+        else:
+            yield {"photo": base64.b64encode(response.content).decode("utf-8")}
 
     class NoPhotoFound(Exception):
         pass
-
-    @classmethod
-    def is_image_response(cls, content: bytes) -> bool:
-        return any(content.startswith(signature) for signature in cls.IMAGE_SIGNATURES)
 
     def validate_response(self, response: requests.Response) -> None:
         if response.status_code == HTTPStatus.NOT_FOUND:
             raise self.NoPhotoFound()
         super().validate_response(response)
-        if not self.is_image_response(response.content):
-            content_type = response.headers.get("Content-Type", "")
-            preview = response.content[:80].decode("utf-8", errors="replace")
-            preview = preview.replace("\r", " ").replace("\n", " ").strip()
-            raise RetriableAPIError(
-                "Photo endpoint returned non-image content. "
-                f"Content-Type: {content_type!r}. Preview: {preview!r}",
-                response,
-            )
+        if self._is_valid_image(response.content):
+            return
+        envelope = self._try_parse_envelope(response)
+        if envelope is not None:
+            try:
+                decoded = base64.b64decode(envelope["fileBase64"], validate=True)
+            except (binascii.Error, ValueError):
+                decoded = b""
+            if self._is_valid_image(decoded):
+                return
+        content_type = response.headers.get("Content-Type", "")
+        preview = response.content[:80].decode("utf-8", errors="replace")
+        preview = preview.replace("\r", " ").replace("\n", " ").strip()
+        raise RetriableAPIError(
+            "Photo endpoint returned non-image content. "
+            f"Content-Type: {content_type!r}. Preview: {preview!r}",
+            response,
+        )
 
 
 # A more generic tables stream would be better, there is a table metadata api

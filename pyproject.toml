@@ -8,8 +8,8 @@ license = "Apache v2"
 [tool.poetry.dependencies]
 python = ">=3.10"
 requests = "^2.25.1"
+pillow = ">=10,<12"
 singer-sdk = "^0.53.6"
-
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.5"
