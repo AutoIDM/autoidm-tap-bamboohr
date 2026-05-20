@@ -7,10 +7,12 @@ import json
 import typing as t
 from functools import cached_property
 from http import HTTPStatus
+from io import BytesIO
 from pathlib import Path
 from typing import Any, Dict, Iterable, Optional
 
 import requests
+from PIL import Image, UnidentifiedImageError
 from singer_sdk import typing
 from singer_sdk.authenticators import BasicAuthenticator
 from singer_sdk.exceptions import RetriableAPIError
@@ -353,14 +355,6 @@ class Photos(TapBambooHRStream):
     replication_key = None
     schema_filepath = SCHEMAS_DIR / "photos.json"
     parent_stream_type = PhotosUsers
-    IMAGE_SIGNATURES = (
-        b"\xff\xd8\xff",  # JPEG
-        b"\x89PNG\r\n\x1a\n",
-        b"GIF87a",
-        b"GIF89a",
-        b"BM",  # BMP
-        b"RIFF",  # WEBP container
-    )
 
     @cached_property
     def path(self):
@@ -396,15 +390,6 @@ class Photos(TapBambooHRStream):
             )
             return
 
-    IMAGE_SIGNATURES = (
-        b"\xff\xd8\xff",          # JPEG
-        b"\x89PNG\r\n\x1a\n",     # PNG
-        b"GIF87a",
-        b"GIF89a",
-        b"BM",                    # BMP
-        b"RIFF",                  # WEBP container
-    )
-
     @property
     def http_headers(self) -> dict:
         # The parent stream sets Accept: application/json, which makes BambooHR
@@ -427,6 +412,15 @@ class Photos(TapBambooHRStream):
             return envelope
         return None
 
+    @staticmethod
+    def _is_valid_image(content: bytes) -> bool:
+        try:
+            with Image.open(BytesIO(content)) as image:
+                image.verify()
+        except (UnidentifiedImageError, OSError, ValueError):
+            return False
+        return True
+
     def parse_response(self, response: requests.Response) -> Iterable[dict]:
         envelope = self._try_parse_envelope(response)
         if envelope is not None:
@@ -437,15 +431,11 @@ class Photos(TapBambooHRStream):
     class NoPhotoFound(Exception):
         pass
 
-    @classmethod
-    def is_image_response(cls, content: bytes) -> bool:
-        return any(content.startswith(signature) for signature in cls.IMAGE_SIGNATURES)
-
     def validate_response(self, response: requests.Response) -> None:
         if response.status_code == HTTPStatus.NOT_FOUND:
             raise self.NoPhotoFound()
         super().validate_response(response)
-        if self.is_image_response(response.content):
+        if self._is_valid_image(response.content):
             return
         if self._try_parse_envelope(response) is not None:
             return
