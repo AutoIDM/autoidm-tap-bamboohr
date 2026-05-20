@@ -8,9 +8,11 @@ from __future__ import annotations
 
 import base64
 import json
+from io import BytesIO
 
 import pytest
 import requests
+from PIL import Image
 from singer_sdk.exceptions import FatalAPIError
 
 from tap_bamboohr.streams import Photos
@@ -20,8 +22,18 @@ from tap_bamboohr.tap import TapBambooHR
 PHOTO_URL = (
     "https://api.bamboohr.com/api/gateway.php/example/v1/employees/123/photo/large"
 )
-RAW_JPEG = b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01fake-jpeg-bytes"
-RAW_PNG = b"\x89PNG\r\n\x1a\nfake-png-bytes"
+
+
+def make_image_bytes(image_format: str) -> bytes:
+    image = Image.new("RGB", (1, 1), color=(255, 255, 255))
+    buffer = BytesIO()
+    image.save(buffer, format=image_format)
+    return buffer.getvalue()
+
+
+RAW_JPEG = make_image_bytes("JPEG")
+RAW_PNG = make_image_bytes("PNG")
+FAKE_JPEG = b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01fake-jpeg-bytes"
 
 
 def make_stream() -> Photos:
@@ -101,6 +113,24 @@ def test_validate_response_rejects_html_error_page() -> None:
     )
     with pytest.raises(FatalAPIError):
         stream.validate_response(response)
+
+
+def test_validate_response_rejects_signature_only_payload() -> None:
+    stream = make_stream()
+    with pytest.raises(FatalAPIError):
+        stream.validate_response(make_response(content=FAKE_JPEG))
+
+
+def test_validate_response_rejects_png_with_corrupt_chunk() -> None:
+    # Pillow's verify() raises SyntaxError (not UnidentifiedImageError) when a
+    # PNG opens cleanly but has a bad chunk checksum. Make sure we still reject.
+    stream = make_stream()
+    corrupt = bytearray(RAW_PNG)
+    corrupt[len(corrupt) // 2] ^= 0xFF
+    with pytest.raises(FatalAPIError):
+        stream.validate_response(
+            make_response(content=bytes(corrupt), content_type="image/png")
+        )
 
 
 def test_validate_response_raises_no_photo_found_on_404() -> None:

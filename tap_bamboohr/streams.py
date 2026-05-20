@@ -7,10 +7,12 @@ import json
 import typing as t
 from functools import cached_property
 from http import HTTPStatus
+from io import BytesIO
 from pathlib import Path
 from typing import Any, Dict, Iterable, Optional
 
 import requests
+from PIL import Image, UnidentifiedImageError
 from singer_sdk import typing
 from singer_sdk._singerlib import Schema
 from singer_sdk.authenticators import BasicAuthenticator
@@ -474,15 +476,6 @@ class Photos(TapBambooHRStream):
             self.logger.warning(f"No photo found for employee, skipping {context.get('_sdc_id')}")
             pass
 
-    IMAGE_SIGNATURES = (
-        b"\xff\xd8\xff",          # JPEG
-        b"\x89PNG\r\n\x1a\n",     # PNG
-        b"GIF87a",
-        b"GIF89a",
-        b"BM",                    # BMP
-        b"RIFF",                  # WEBP container
-    )
-
     @property
     def http_headers(self) -> dict:
         # The parent stream sets Accept: application/json, which makes BambooHR
@@ -505,6 +498,15 @@ class Photos(TapBambooHRStream):
             return envelope
         return None
 
+    @staticmethod
+    def _is_valid_image(content: bytes) -> bool:
+        try:
+            with Image.open(BytesIO(content)) as image:
+                image.verify()
+        except (UnidentifiedImageError, OSError, ValueError, SyntaxError):
+            return False
+        return True
+
     def parse_response(self, response: requests.Response) -> Iterable[dict]:
         envelope = self._try_parse_envelope(response)
         if envelope is not None:
@@ -523,7 +525,7 @@ class Photos(TapBambooHRStream):
         # anything else (e.g. HTML or XML error pages) so we don't store a
         # non-image value that targets will fail on later.
         content = response.content
-        if any(content.startswith(sig) for sig in self.IMAGE_SIGNATURES):
+        if self._is_valid_image(content):
             return
         if self._try_parse_envelope(response) is not None:
             return
