@@ -121,6 +121,22 @@ def test_validate_response_rejects_signature_only_payload() -> None:
         stream.validate_response(make_response(content=FAKE_JPEG))
 
 
+def test_validate_response_rejects_envelope_with_garbage_payload() -> None:
+    # The envelope shape is valid, but fileBase64 decodes to non-image bytes.
+    # Without inner validation this would slip through and reach the target.
+    stream = make_stream()
+    envelope = {
+        "mimeType": "image/jpeg",
+        "fileBase64": base64.b64encode(b"this is not an image").decode("ascii"),
+    }
+    response = make_response(
+        content=json.dumps(envelope).encode("utf-8"),
+        content_type="application/json",
+    )
+    with pytest.raises(RetriableAPIError):
+        stream.validate_response(response)
+
+
 def test_validate_response_rejects_png_with_corrupt_chunk() -> None:
     # Pillow's verify() raises SyntaxError (not UnidentifiedImageError) when a
     # PNG opens cleanly but has a bad chunk checksum. Make sure we still reject.

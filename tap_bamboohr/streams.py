@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import base64
+import binascii
 import copy
 import json
 import typing as t
@@ -437,8 +438,14 @@ class Photos(TapBambooHRStream):
         super().validate_response(response)
         if self._is_valid_image(response.content):
             return
-        if self._try_parse_envelope(response) is not None:
-            return
+        envelope = self._try_parse_envelope(response)
+        if envelope is not None:
+            try:
+                decoded = base64.b64decode(envelope["fileBase64"], validate=True)
+            except (binascii.Error, ValueError):
+                decoded = b""
+            if self._is_valid_image(decoded):
+                return
         content_type = response.headers.get("Content-Type", "")
         preview = response.content[:80].decode("utf-8", errors="replace")
         preview = preview.replace("\r", " ").replace("\n", " ").strip()
